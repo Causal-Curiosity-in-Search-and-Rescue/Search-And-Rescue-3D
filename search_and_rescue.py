@@ -7,6 +7,8 @@ import math
 from joblib import load
 from collections import deque
 import time
+import warnings
+warnings.filterwarnings("ignore")
 
 from digital_mind import EnvironmentObjectsManager
 from preprocessing import normalise_textures,get_texture_features
@@ -299,6 +301,8 @@ class SearchAndRescueEnv(gym.Env):
                             movability_dict[0] = int(obj.movability)
                         else:
                             movability_dict[0] = 1
+                    else:
+                        movability_dict[0] = 1
 
                 if movability_dict[1] == None:
                     if obj.texture_class == 1:
@@ -306,7 +310,8 @@ class SearchAndRescueEnv(gym.Env):
                             movability_dict[1] = int(obj.movability)
                         else:
                             movability_dict[1] = 1
-                
+                    else:
+                        movability_dict[1] = 1
                 movability = np.array([movability_dict[0],movability_dict[1]])
                 
         df = pd.DataFrame({
@@ -398,7 +403,7 @@ class SearchAndRescueEnv(gym.Env):
         # collision_info = self.check_collision_with_boundary_and_update_state(self.robot_position)
         # if collision_info['has_collided']:
         #     print('[INFO] : Has Colided ')
-        #     p.resetBasePositionAndOrientation(self.TURTLE,self.previous_position,agent_orn)
+        #     # p.resetBasePositionAndOrientation(self.TURTLE,self.previous_position,agent_orn)
         #     self.reward -= 10
         
         # TODO check collision with object and object , check if object has causal movability , check if action resulted in movement using the sensing module
@@ -430,7 +435,7 @@ class SearchAndRescueEnv(gym.Env):
         
         observation = [self.robot_position[0], self.robot_position[1], goal_delta_x,goal_delta_y] + list(self.prev_actions) + flattened_rl_info
         observation = np.array(observation)
-        print('[INFO] Observation Space : ',observation)
+        # print('[INFO] Observation Space : ',observation)
         info = {}
         
         return observation,self.reward,self.done,info
@@ -533,12 +538,13 @@ if not os.path.exists(logdir):
 env = SearchAndRescueEnv()
 # observation = env.reset()
 done = False
-model = PPO('MlpPolicy', env, verbose=1, tensorboard_log=logdir)
+model = PPO('MlpPolicy', env, verbose=1)
 
 TIMESTEPS = 10000
 iters = 0
 while True:
 	iters += 1
+	print(f"[INFO] TimeStep: ({iters}/{TIMESTEPS})")
 	model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
 	model.save(f"{models_dir}/{TIMESTEPS*iters}")
 
