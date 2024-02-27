@@ -1,0 +1,26 @@
+{
+    "7": {
+        "ID": "7",
+        "Texture Class": "None",
+        "Texture": {
+            "contrast": 0.2985253046594482,
+            "dissimilarity": 1.0,
+            "homogeneity": 0.1894022363482865,
+            "energy": 0.09277954320071997,
+            "correlation": 0.2701422694831321,
+            "ASM": 0.0
+        },
+        "Current Position": [
+            "x",
+            "y",
+            "z"
+        ],
+        "Initial Position": [
+            "x",
+            "y",
+            "z"
+        ],
+        "Casual Probability": "None",
+        "Movability": true
+    }
+}

@@ -26,8 +26,8 @@ class ObjectStruct:
 
         # Initialize attributes with default/empty values
         self.texture = None
-        self.position = [None,None,None] #{'x': None, 'y': None, 'z': None}  # Using a dictionary to store position
-        self.initial_position = [None,None,None] #{'x': None, 'y': None, 'z': None}  # Store the initial position
+        self.position = {'x': None, 'y': None, 'z': None}  # Using a dictionary to store position
+        self.initial_position = {'x': None, 'y': None, 'z': None}  # Store the initial position
         self.casual_probability = None
         self.movability = None
         self.texture_class = None
@@ -35,27 +35,27 @@ class ObjectStruct:
     # Method to update object's attributes
     def update_attributes(self, texture=None, x=None, y=None, z=None, casual_probability=None, movability=None, texture_class = None):
 
-        if self.initial_position[0] is None and x is not None:
-            self.initial_position[0] = x
-        if self.initial_position[1] is None and y is not None:
-            self.initial_position[1] = y
-        if self.initial_position[2] is None and z is not None:
-            self.initial_position[2] = z
+        if self.initial_position['x'] is None and x is not None:
+            self.initial_position['x'] = x
+        if self.initial_position['y'] is None and y is not None:
+            self.initial_position['y'] = y
+        if self.initial_position['z'] is None and z is not None:
+            self.initial_position['z'] = z
 
-        # # Check if the new position differs from the initial position
-        # if (x is not None and x != self.initial_position[0]) or \
-        #    (y is not None and y != self.initial_position[1]) or \
-        #    (z is not None and z != self.initial_position[2]):
-        #     self.movability = True
+        # Check if the new position differs from the initial position
+        if (x is not None and x != self.initial_position['x']) or \
+           (y is not None and y != self.initial_position['y']) or \
+           (z is not None and z != self.initial_position['z']):
+            self.movability = True
 
         if texture is not None:
             self.texture = texture
         if x is not None:
-            self.position[0] = x
+            self.position['x'] = x
         if y is not None:
-            self.position[1] = y
+            self.position['y'] = y
         if z is not None:
-            self.position[2] = z
+            self.position['z'] = z
         if casual_probability is not None:
             self.casual_probability = casual_probability
         if movability is not None:

@@ -1,0 +1,50 @@
+{
+    "6": {
+        "ID": 6,
+        "Texture Class": 1,
+        "Texture": {
+            "contrast": 0.2211671869349584,
+            "dissimilarity": 1.0,
+            "homogeneity": 0.23639807359226506,
+            "energy": 0.08258684479668138,
+            "correlation": 0.3678513877578441,
+            "ASM": 0.0
+        },
+        "Current Position": [
+            2,
+            0,
+            0
+        ],
+        "Initial Position": [
+            2,
+            0,
+            0
+        ],
+        "Casual Probability": 1,
+        "Movability": false
+    },
+    "7": {
+        "ID": 7,
+        "Texture Class": 1,
+        "Texture": {
+            "contrast": 0.5050400195199451,
+            "dissimilarity": 1.0,
+            "homogeneity": 0.4689959175827971,
+            "energy": 0.1663672560470918,
+            "correlation": 0.5073315788467025,
+            "ASM": 0.0
+        },
+        "Current Position": [
+            -1,
+            0,
+            0
+        ],
+        "Initial Position": [
+            -1,
+            0,
+            0
+        ],
+        "Casual Probability": 1,
+        "Movability": false
+    }
+}
