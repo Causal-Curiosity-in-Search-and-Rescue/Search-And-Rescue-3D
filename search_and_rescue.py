@@ -564,25 +564,25 @@ logging.debug('About to reset environment')
 env.reset()
 logging.debug('Environment reset successfully')
 done = False
-# model = PPO('MlpPolicy', env, verbose=1)
+model = PPO('MlpPolicy', env, verbose=1)
 
-# TIMESTEPS = 10000
-# iters = 0
-# while not done:
-#     iters += 1
-#     print(f"[INFO] TimeStep: ({iters}/{TIMESTEPS})")
-#     observation,reward,done,info = model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
-#     model.save("ppo_learned")
+TIMESTEPS = 10000
+iters = 0
+while not done:
+    iters += 1
+    print(f"[INFO] TimeStep: ({iters}/{TIMESTEPS})")
+    observation,reward,done,info = model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
+    model.save("ppo_learned")
 
-# UNIT-TEST
-try:
-    while not done:
-        action = env.action_space.sample()  # Take a random action or implement your control logic here
-        logging.debug(f'Taking a step with action: {action}')
-        observation, reward, done, info = env.step(action)
-        logging.debug(f'Step taken. Observation: {observation}, Reward: {reward}, Done: {done}, Info: {info}')
-except Exception as e:
-    logging.error(f'An error occurred: {e}', exc_info=True)
+# # UNIT-TEST
+# try:
+#     while not done:
+#         action = env.action_space.sample()  # Take a random action or implement your control logic here
+#         logging.debug(f'Taking a step with action: {action}')
+#         observation, reward, done, info = env.step(action)
+#         logging.debug(f'Step taken. Observation: {observation}, Reward: {reward}, Done: {done}, Info: {info}')
+# except Exception as e:
+#     logging.error(f'An error occurred: {e}', exc_info=True)
 
 input("Press Enter to continue...")
 

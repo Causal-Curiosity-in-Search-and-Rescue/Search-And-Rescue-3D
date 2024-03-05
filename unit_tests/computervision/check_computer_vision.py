@@ -7,7 +7,9 @@ import pybullet_data
 from digital_mind_objects import EnvironmentObjectsManager
 from glcm import get_texture_features,normalise_textures
 from maths_functions import calculate_vector,distance_3d,calculate_cos_angle,quaternion_to_forward_vector
+from store_dataset import store_object_information
 from joblib import load
+import pandas as pd 
 
 import pickle
 from skimage import io, feature
@@ -15,11 +17,12 @@ from sklearn import preprocessing, model_selection, neighbors, metrics
 import sklearn
 print(sklearn.__version__)
 
-BASE_PATH = "E:/CranfieldWorkspace/GDP/GitRepo/reinforcement_learning"
+BASE_PATH = "/home/docsun/Documents/git-repo/juliangdz/Search-And-Rescue-3D"
 
 # Load the trained k-NN model and the scaler
-model = load(f'{BASE_PATH}/resources/models/rf_model.joblib')
+model = load(f'{BASE_PATH}/resources/models/unsup_txture_clsf_kmeans.joblib')
 scaler = load(f'{BASE_PATH}/resources/models/scaler.joblib')
+unsup_scaler = load(f'{BASE_PATH}/resources/models/unsup_txture_clsf_scaler.joblib')
 
 
 
@@ -271,18 +274,12 @@ while (1):
             #On getting close to object for inspection, get the predicted class
 
             if distance<=1 and cos_angle < -0.30: # If im facing
-
-                #Use the Model to predict texture class
-                current_visual_prediction = model.predict(predict_array)
-                current_visual_prediction +=1 # Makes class 0 = 1, class 1 = 2
-                classified_image = "Cracked" if (current_visual_prediction == 2) else "Grooved"
-                print(f"The predicted class for the texture is: {classified_image}")
+                
                 #print("DEBUG:",forward,last_pos_x,agent_pos[0],last_pos_y,agent_pos[1])
 
                 ##Checking if the object is moving by measuring our commands vs position
                 if forward == 1 and (((last_pos_x-0.01) < agent_pos[0] < (last_pos_x+0.01)) and ((last_pos_y-0.01) < agent_pos[1] < (last_pos_y+0.01))):
                     #print(f"{uid} NOT MOVING")
-
                     #Now we make the object we are pushing against's movability = False
                     for obj_id, obj in env_manager.objects.items():
                         if obj.id == uid:
@@ -293,7 +290,44 @@ while (1):
             #Get robot position at last step to aid in classifying movability
             last_pos_x = agent_pos[0]
             last_pos_y = agent_pos[1]
+            
+            # Updated Vision Texture Classification 
+            object_information = {
+                    'contrast': features['contrast'],
+                    'dissimilarity': features['dissimilarity'],
+                    'homogeneity': features['homogeneity'],
+                    'energy': features['energy'],
+                    'correlation': features['correlation'],
+                    'ASM': features['ASM'],
+                    'distance':distance,
+                    'cos_angle':cos_angle
+                }
+            object_df = pd.DataFrame([object_information])
+            #Use the Model to predict texture class
+            scaled_data = unsup_scaler.transform(object_df)
+            current_visual_prediction = model.predict(scaled_data)
+            print('Current Visual Prediction : ',current_visual_prediction)
+            current_visual_prediction +=1 # Makes class 0 = 1, class 1 = 2
+            classified_image = "Cracked" if (current_visual_prediction == 2) else "Grooved"
+            print(f"The predicted class for the texture is: {classified_image}")
 
+            # For Internal dataset Creation for Vision Training
+            object_information = {
+                'box_type':uid, # Doesnt make sense to add box_type to dataset 
+                'contrast': features['contrast'],
+                'dissimilarity': features['dissimilarity'],
+                'homogeneity': features['homogeneity'],
+                'energy': features['energy'],
+                'correlation': features['correlation'],
+                'ASM': features['ASM'],
+                'distance':distance,
+                'cos_angle':cos_angle
+            }
+            store_object_information(
+               object_information,
+               save_path='/home/docsun/Documents/git-repo/juliangdz/Search-And-Rescue-3D/unit_tests/computervision/data' 
+            )
+            
             create_or_update_object(uid,current_visual_prediction, pos[0], pos[1], pos[2],features)
 
     # print("All Current Objects:")
@@ -311,6 +345,8 @@ while (1):
             'Casual Probability': str(obj.casual_probability),  # Convert to Python float if necessary
             'Movability': bool(obj.movability)  # Ensure it's a native Python boolean
         }
+        
+        
 
     file_path = f'digital_mind_log.json'
     # Write the data to a JSON file

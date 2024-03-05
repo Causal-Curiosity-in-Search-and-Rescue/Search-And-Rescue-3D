@@ -1,13 +1,61 @@
 {
     "7": {
         "ID": "7",
-        "Texture Class": "None",
+        "Texture Class": "[2]",
         "Texture": {
-            "contrast": 0.2985253046594482,
+            "contrast": 0.23338128423416354,
+            "dissimilarity": 1.0000000000000002,
+            "homogeneity": 0.3429914123223217,
+            "energy": 0.1279627058426424,
+            "correlation": 0.4268599245788044,
+            "ASM": 0.0
+        },
+        "Current Position": [
+            "x",
+            "y",
+            "z"
+        ],
+        "Initial Position": [
+            "x",
+            "y",
+            "z"
+        ],
+        "Casual Probability": "None",
+        "Movability": true
+    },
+    "6": {
+        "ID": "6",
+        "Texture Class": "[2]",
+        "Texture": {
+            "contrast": 0.29766794593523105,
             "dissimilarity": 1.0,
-            "homogeneity": 0.1894022363482865,
-            "energy": 0.09277954320071997,
-            "correlation": 0.2701422694831321,
+            "homogeneity": 0.49221514285266077,
+            "energy": 0.2078099916662053,
+            "correlation": 0.5645292560359448,
+            "ASM": 0.0
+        },
+        "Current Position": [
+            "x",
+            "y",
+            "z"
+        ],
+        "Initial Position": [
+            "x",
+            "y",
+            "z"
+        ],
+        "Casual Probability": "None",
+        "Movability": true
+    },
+    "8": {
+        "ID": "8",
+        "Texture Class": "[2]",
+        "Texture": {
+            "contrast": 0.5871761770976367,
+            "dissimilarity": 0.9999999999999998,
+            "homogeneity": 0.6110848516963292,
+            "energy": 0.24487857031322896,
+            "correlation": 0.6634788820069086,
             "ASM": 0.0
         },
         "Current Position": [
