@@ -78,15 +78,15 @@ class SearchAndRescueEnv(gym.Env):
             
     def create_goals(self):
         goalIDVisual = p.createVisualShape(p.GEOM_BOX,
-                                        halfExtents=[0.5, 0.5, 0.5],
+                                        halfExtents=[0.25, 0.25, 0.5],
                                         rgbaColor=[0.5, 1, 0.5, 1],
                                         )
-        # goalIDCollision = p.createCollisionShape(p.GEOM_BOX,
-        #                                 halfExtents=[0.5, 0.5, 0.5])
-        goalBox = p.createMultiBody(baseMass=1000,
+        goalIDCollision = p.createCollisionShape(p.GEOM_BOX,
+                                        halfExtents=[0.5, 0.5, 0.5])
+        goalBox = p.createMultiBody(baseMass=1,
                             baseVisualShapeIndex=goalIDVisual,
-                            # baseCollisionShapeIndex=goalIDCollision,
-                            basePosition=[2, 0, 1],
+                            baseCollisionShapeIndex=goalIDCollision,
+                            basePosition=[-3,-0, 1],
                             baseOrientation=p.getQuaternionFromEuler([0,0,0])
                         )
         # p.changeVisualShape(box2,-1  )
@@ -304,7 +304,9 @@ class SearchAndRescueEnv(gym.Env):
     
     def apply_thresholding(self,uid,current_prediction):
         self.visual_predictions[uid].append(current_prediction)
+        print(f'[DEBUG] Length of Current Visual Predictions for {uid} then {len(self.visual_predictions[uid])}')
         prediction_prob = np.mean(self.visual_predictions[uid])
+        print(f"[DEBUG] Mean of visual Predictions for {uid} then {prediction_prob}")
         if prediction_prob > 0.8:
             return 1
         else:
@@ -463,7 +465,7 @@ class SearchAndRescueEnv(gym.Env):
         if goal_collision_info['reached_goal']:
             # print('[INFO] Has Reached Goal ')
             self.reward = 200
-            # self.done = True
+            self.done = True
         
         self.last_action = action
         
@@ -482,7 +484,7 @@ class SearchAndRescueEnv(gym.Env):
             rl_info.append([causal_movability,int(object_delta_x),int(object_delta_y)])
         flattened_rl_info = [item for sublist in rl_info for item in sublist]
         
-        ##TODO - Create Entropy for Balance with Exploring considering Previous Interactions with the Same Path - Visit Counts scaled from 0 -> 1 
+        ## TODO - Scale Visit Counts from 0 -> 1
         
         observation = [int(self.robot_position[0]), int(self.robot_position[1]), int(goal_delta_x),int(goal_delta_y)]  + flattened_rl_info + list(self.prev_actions)
         observation = np.array(observation)
