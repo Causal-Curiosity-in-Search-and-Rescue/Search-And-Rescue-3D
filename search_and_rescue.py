@@ -75,7 +75,27 @@ class SearchAndRescueEnv(gym.Env):
                                         baseCollisionShapeIndex=collision_shape_id, basePosition=pos,
                                         baseOrientation=orn)
             self.wall_ids.append(wall_id)
+            
+    def create_goals(self):
+        goalIDVisual = p.createVisualShape(p.GEOM_BOX,
+                                        halfExtents=[0.5, 0.5, 0.5],
+                                        rgbaColor=[0.5, 1, 0.5, 1],
+                                        )
+        # goalIDCollision = p.createCollisionShape(p.GEOM_BOX,
+        #                                 halfExtents=[0.5, 0.5, 0.5])
+        goalBox = p.createMultiBody(baseMass=1000,
+                            baseVisualShapeIndex=goalIDVisual,
+                            # baseCollisionShapeIndex=goalIDCollision,
+                            basePosition=[2, 0, 1],
+                            baseOrientation=p.getQuaternionFromEuler([0,0,0])
+                        )
+        # p.changeVisualShape(box2,-1  )
         
+        goalPos, orn = p.getBasePositionAndOrientation(goalBox)
+        
+        return goalPos,goalBox
+        
+           
     def create_obstacles(self):
         # boxIdVisual1 = p.createVisualShape(p.GEOM_BOX,
         #                           halfExtents=[0.5, 0.5, 0.5],
@@ -91,6 +111,7 @@ class SearchAndRescueEnv(gym.Env):
                                         )
         boxIdCollision = p.createCollisionShape(p.GEOM_BOX,
                                         halfExtents=[0.5, 0.5, 0.5])
+        
         
         # box1 =p.createMultiBody(baseMass=1,
         #             baseVisualShapeIndex=boxIdVisual1,
@@ -284,7 +305,7 @@ class SearchAndRescueEnv(gym.Env):
     def apply_thresholding(self,uid,current_prediction):
         self.visual_predictions[uid].append(current_prediction)
         prediction_prob = np.mean(self.visual_predictions[uid])
-        if prediction_prob > 0.5:
+        if prediction_prob > 0.8:
             return 1
         else:
             return 0
@@ -436,8 +457,6 @@ class SearchAndRescueEnv(gym.Env):
             self.reward = -10
             self.done = True
         
-        # TODO check collision with object and object , check if object has causal movability , check if action resulted in movement using the sensing module
-        
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         # handle collision with goal - Set a high reward and set done to true
         goal_collision_info = self.check_collision_with_goal_and_update_state(self.robot_position)
@@ -462,6 +481,8 @@ class SearchAndRescueEnv(gym.Env):
                 object_delta_y = self.objectPositions[objectID][1] - self.robot_position[1]
             rl_info.append([causal_movability,int(object_delta_x),int(object_delta_y)])
         flattened_rl_info = [item for sublist in rl_info for item in sublist]
+        
+        ##TODO - Create Entropy for Balance with Exploring considering Previous Interactions with the Same Path - Visit Counts scaled from 0 -> 1 
         
         observation = [int(self.robot_position[0]), int(self.robot_position[1]), int(goal_delta_x),int(goal_delta_y)]  + flattened_rl_info + list(self.prev_actions)
         observation = np.array(observation)
@@ -531,13 +552,14 @@ class SearchAndRescueEnv(gym.Env):
         
         # Create the Obstacles
         self.objectIDs = self.create_obstacles()# List of unique IDs for each instance
+        self.goal_position, self.goalIDs = self.create_goals()
         self.objectPositions = self.initialized_objects_position(self.objectIDs)
         
         for objectID in self.objectIDs:
             self.visual_predictions[objectID] = []
         
-        # Set the Goal to be the position of the 3rd Movable Object for now 
-        self.goal_position = self.objectPositions[self.objectIDs[-1]]
+        # # Set the Goal to be the position of the 3rd Movable Object for now 
+        # self.goal_position = self.objectPositions[self.objectIDs[-1]]
         
         # Setup the Agent 
         self.robot_position,self.camera_position,self.robot_orientation = self.setup_agent()
