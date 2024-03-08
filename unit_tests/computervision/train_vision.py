@@ -18,8 +18,10 @@ mapping = {8: 0, 6: 1, 7: 2}
 df['box_type'] = df['box_type'].map(mapping)
 
 # Splitting data into features and target
-X = df.drop('box_type', axis=1)
+X = df.drop(['box_type'], axis=1)
 y = df['box_type']
+print(X.head())
+print(y.head())
 
 # Standardize the features
 scaler = StandardScaler()
@@ -41,5 +43,5 @@ y_pred = clf.predict(X_val)
 print("Classification Report:\n", classification_report(y_val, y_pred))
 
 # Saving the  Model
-dump(clf,'resources/models/unsup_txture_clsf_kmeans.joblib')
+dump(clf,'resources/models/unsup_txture_clsf_rf.joblib')
 dump(scaler,'resources/models/unsup_txture_clsf_scaler.joblib')

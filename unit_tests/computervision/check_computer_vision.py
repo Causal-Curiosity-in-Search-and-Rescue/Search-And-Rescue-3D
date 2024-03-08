@@ -20,7 +20,7 @@ print(sklearn.__version__)
 BASE_PATH = "/home/docsun/Documents/git-repo/juliangdz/Search-And-Rescue-3D"
 
 # Load the trained k-NN model and the scaler
-model = load(f'{BASE_PATH}/resources/models/unsup_txture_clsf_kmeans.joblib')
+model = load(f'{BASE_PATH}/resources/models/unsup_txture_clsf_rf.joblib')
 scaler = load(f'{BASE_PATH}/resources/models/scaler.joblib')
 unsup_scaler = load(f'{BASE_PATH}/resources/models/unsup_txture_clsf_scaler.joblib')
 
@@ -298,18 +298,18 @@ while (1):
                     'homogeneity': features['homogeneity'],
                     'energy': features['energy'],
                     'correlation': features['correlation'],
-                    'ASM': features['ASM'],
-                    'distance':distance,
-                    'cos_angle':cos_angle
+                    'ASM': features['ASM']
+                    # 'distance':distance,
+                    # 'cos_angle':cos_angle
                 }
             object_df = pd.DataFrame([object_information])
             #Use the Model to predict texture class
             scaled_data = unsup_scaler.transform(object_df)
             current_visual_prediction = model.predict(scaled_data)
             print('Current Visual Prediction : ',current_visual_prediction)
-            current_visual_prediction +=1 # Makes class 0 = 1, class 1 = 2
-            classified_image = "Cracked" if (current_visual_prediction == 2) else "Grooved"
-            print(f"The predicted class for the texture is: {classified_image}")
+            # current_visual_prediction +=1 # Makes class 0 = 1, class 1 = 2
+            # classified_image = "Cracked" if (current_visual_prediction == 2) else "Grooved"
+            # print(f"The predicted class for the texture is: {classified_image}")
 
             # For Internal dataset Creation for Vision Training
             object_information = {
@@ -319,9 +319,9 @@ while (1):
                 'homogeneity': features['homogeneity'],
                 'energy': features['energy'],
                 'correlation': features['correlation'],
-                'ASM': features['ASM'],
-                'distance':distance,
-                'cos_angle':cos_angle
+                'ASM': features['ASM']
+                # 'distance':distance,
+                # 'cos_angle':cos_angle
             }
             store_object_information(
                object_information,

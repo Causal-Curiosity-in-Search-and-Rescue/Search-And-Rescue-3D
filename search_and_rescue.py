@@ -29,9 +29,9 @@ import pdb
 BASE_PATH = os.path.join(os.getcwd(),"resources")
 
 # LOAD COMPUTERVISION MODELS
-CV_MODEL = load(f"{BASE_PATH}/models/rf_model.joblib")
+CV_MODEL = load(f"{BASE_PATH}/models/unsup_txture_clsf_rf.joblib")
 SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
-
+CV_SCALER = load(f"{BASE_PATH}/models/unsup_txture_clsf_scaler.joblib")
 # Initialize Digital MIND
 ENV_MANAGER = EnvironmentObjectsManager()
 
@@ -55,7 +55,7 @@ class SearchAndRescueEnv(gym.Env):
     def __init__(self):
         super(SearchAndRescueEnv, self).__init__()
         self.action_space = spaces.Discrete(3)  # Forward, Left, Right, Stop
-        self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(10,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(10+AGENT_ACTION_LEN,), dtype=np.float32)
     
     def create_walls(self):
         self.wall_ids = []  # Store wall IDs in an attribute for later access
@@ -106,7 +106,7 @@ class SearchAndRescueEnv(gym.Env):
                             basePosition=[2, 0, 1],
                             baseOrientation=p.getQuaternionFromEuler([0,0,0])
                         )
-        p.changeVisualShape(box2,-1 ,textureUniqueId=self.MARBLED_1)
+        p.changeVisualShape(box2,-1 ,textureUniqueId=self.CRACKED_1 )
 
         box3 = p.createMultiBody(baseMass=1,
                             baseVisualShapeIndex=boxIdVisual3,
@@ -134,7 +134,7 @@ class SearchAndRescueEnv(gym.Env):
     def translate_action(self,action):
         move = 0
         turn = 0
-        speed = 10
+        speed = 2
         leftWheelVelocity = 0
         rightWheelVelocity = 0
         
@@ -230,8 +230,32 @@ class SearchAndRescueEnv(gym.Env):
                 vector_to_object = calculate_vector(self.robot_position, pos)
                 # Calculate the cosine of the angle between your orientation and the vector to the object
                 cos_angle = calculate_cos_angle(quaternion_to_forward_vector(robot_orientation), vector_to_object)
+                
+                object_information = {
+                        'contrast': features['contrast'],
+                        'dissimilarity': features['dissimilarity'],
+                        'homogeneity': features['homogeneity'],
+                        'energy': features['energy'],
+                        'correlation': features['correlation'],
+                        'ASM': features['ASM'],
+                        'distance':distance,
+                        'cos_angle':cos_angle
+                    }
+                object_df = pd.DataFrame([object_information])
+                scaled_data = CV_SCALER.transform(object_df)
+                predictions = CV_MODEL.predict(scaled_data)
+                if predictions[0] in [2,1]:
+                    current_visual_prediction = 1
+                else:
+                    current_visual_prediction = 0
+                thresholded_prediction = self.apply_thresholding(uid,current_visual_prediction)
+                classified_image = "Cracked" if (thresholded_prediction == 1) else "Grooved"
+                print(f'[INFO] Classified Texture Class : {classified_image} - UID : {uid} - Position : {pos} -  {thresholded_prediction}')
+                
                 #On getting close to object for inspection, get the predicted class
                 if distance<=1 and cos_angle < -0.30: # Robot is facing the object 
+                    # Updated Vision Texture Classification 
+                     
                     sensing_info.append(
                         {
                             'uid':uid,
@@ -239,7 +263,7 @@ class SearchAndRescueEnv(gym.Env):
                             'cos_angle':cos_angle,
                             'is_facing_object':True,
                             'object_position_has_changed':self.check_if_object_position_has_changed(),
-                            'current_visual_prediction':current_visual_prediction
+                            'current_visual_prediction':thresholded_prediction
                         }
                     )
                 else:
@@ -250,15 +274,21 @@ class SearchAndRescueEnv(gym.Env):
                             'cos_angle':cos_angle,
                             'is_facing_object':False,
                             'object_position_has_changed':self.check_if_object_position_has_changed(),
-                            'current_visual_prediction':current_visual_prediction
+                            'current_visual_prediction':thresholded_prediction
                         }
                     )
-                current_visual_prediction = CV_MODEL.predict(predict_array)
-                classified_image = "Cracked" if (current_visual_prediction == 1) else "Grooved"   
-                print(f'Classified Texture Class : {classified_image} - UID : {uid} - Position : {pos} -  {current_visual_prediction}')
-                create_or_update_object(uid,current_visual_prediction[0], pos[0], pos[1], pos[2],features)
-        return sensing_info
                 
+                create_or_update_object(uid,thresholded_prediction, pos[0], pos[1], pos[2],features)
+        return sensing_info
+    
+    def apply_thresholding(self,uid,current_prediction):
+        self.visual_predictions[uid].append(current_prediction)
+        prediction_prob = np.mean(self.visual_predictions[uid])
+        if prediction_prob > 0.5:
+            return 1
+        else:
+            return 0
+        
     def check_if_object_position_has_changed(self): # Relative to seeing if object has moved as a result of robot moving against the object its facing and comparing previous positions
         if (((self.previous_position[0]-0.01) < self.robot_position[0] < (self.previous_position[0]+0.01)) and ((self.previous_position[1]-0.01) < self.robot_position[1] < (self.previous_position[1]+0.01))):
             return False
@@ -318,7 +348,7 @@ class SearchAndRescueEnv(gym.Env):
                             self.movability_dict[1] = 1
                     # else:
                     #     movability_dict[1] = 1
-                # print('Movability Dictionary: ',self.movability_dict)                
+                print('[INFO] Movability Dictionary: ',self.movability_dict)                
                 if (self.movability_dict[0] != None) and (self.movability_dict[1] != None):
                     movability = np.array([self.movability_dict[0],self.movability_dict[1]])
                 else:
@@ -338,7 +368,6 @@ class SearchAndRescueEnv(gym.Env):
         bn = BayesianNetwork(causal_model)
         bn = bn.fit_node_states(df)
         bn = bn.fit_cpds(df, method="BayesianEstimator", bayes_prior="K2")
-        
         # Predicting the probabilities
         predictions = bn.predict_probability(df, 'Movability')
         
@@ -350,8 +379,10 @@ class SearchAndRescueEnv(gym.Env):
     def get_texture_and_movability(self,objectID):
         for obj_id, obj in ENV_MANAGER.objects.items():
             if obj.id == objectID:
-                return  int(obj.texture_class), int(obj.casual_probability),obj.initial_position
-        return -1, -1, (None,None,None)
+                if obj.texture_class != None:
+                    return  int(obj.texture_class), int(obj.casual_probability),obj.initial_position
+                return -1,int(obj.casual_probability),obj.initial_position
+        return -1,-1,(None,None,None)
 
     def check_collision_with_walls(self):
         collision_info = {
@@ -378,8 +409,8 @@ class SearchAndRescueEnv(gym.Env):
         if ((int(self.goal_position[0]) - 0.01) < int(agent_position[0] )< (int(self.goal_position[0]) + 0.01)) and ((int(self.goal_position[0]) - 0.01) < int(agent_position[1]) < (int(self.goal_position[0]) + 0.01)): #and (agent_position[2] == self.goal_position[2]):
             collision_info['reached_goal']=True
         
-        print(f'Goal Position : {int(self.goal_position[0])} - {int(self.goal_position[1])}')
-        print(f'Agent position : {int(agent_position[0])} - {int(agent_position[1])}')
+        # print(f'Goal Position : {int(self.goal_position[0])} - {int(self.goal_position[1])}')
+        # print(f'Agent position : {int(agent_position[0])} - {int(agent_position[1])}')
         
         return collision_info        
 
@@ -401,9 +432,9 @@ class SearchAndRescueEnv(gym.Env):
         
         collision_info = self.check_collision_with_walls()
         if collision_info['has_collided']:
-            print('[INFO] : Has Colided ')
+            # print('[INFO] : Has Colided ')
             self.reward = -10
-            # self.done = True
+            self.done = True
         
         # TODO check collision with object and object , check if object has causal movability , check if action resulted in movement using the sensing module
         
@@ -411,9 +442,9 @@ class SearchAndRescueEnv(gym.Env):
         # handle collision with goal - Set a high reward and set done to true
         goal_collision_info = self.check_collision_with_goal_and_update_state(self.robot_position)
         if goal_collision_info['reached_goal']:
-            print('[INFO] Has Reached Goal ')
+            # print('[INFO] Has Reached Goal ')
             self.reward = 200
-            self.done = True
+            # self.done = True
         
         self.last_action = action
         
@@ -432,7 +463,7 @@ class SearchAndRescueEnv(gym.Env):
             rl_info.append([causal_movability,int(object_delta_x),int(object_delta_y)])
         flattened_rl_info = [item for sublist in rl_info for item in sublist]
         
-        observation = [int(self.robot_position[0]), int(self.robot_position[1]), int(goal_delta_x),int(goal_delta_y)]  + flattened_rl_info #+ list(self.prev_actions)
+        observation = [int(self.robot_position[0]), int(self.robot_position[1]), int(goal_delta_x),int(goal_delta_y)]  + flattened_rl_info + list(self.prev_actions)
         observation = np.array(observation)
         # print('[INFO] Observation Space : ',observation)
         info = {}
@@ -446,15 +477,26 @@ class SearchAndRescueEnv(gym.Env):
         objects_data = {}
         for obj_id, obj in ENV_MANAGER.objects.items():
             # Convert numpy data types to Python native types for JSON serialization
-            objects_data[str(obj_id)] = {
-                'ID': int(obj.id),  # Convert to Python int if it's numpy.int32 or similar
-                'Texture Class': int(obj.texture_class),  # Same conversion
-                'Texture': obj.texture,  # Assuming this is already a serializable type
-                'Current Position': tuple(obj.position),  # Convert to tuple, which should be fine
-                'Initial Position': tuple(obj.initial_position),  # Same as above
-                'Casual Probability': int(obj.casual_probability),  # Convert to Python float if necessary
-                'Movability': bool(obj.movability)  # Ensure it's a native Python boolean
-            }
+            if obj.texture_class != None:
+                objects_data[str(obj_id)] = {
+                    'ID': int(obj.id),  # Convert to Python int if it's numpy.int32 or similar
+                    'Texture Class': int(obj.texture_class),  # Same conversion
+                    'Texture': obj.texture,  # Assuming this is already a serializable type
+                    'Current Position': tuple(obj.position),  # Convert to tuple, which should be fine
+                    'Initial Position': tuple(obj.initial_position),  # Same as above
+                    'Casual Probability': int(obj.casual_probability),  # Convert to Python float if necessary
+                    'Movability': bool(obj.movability)  # Ensure it's a native Python boolean
+                }
+            else:
+                objects_data[str(obj_id)] = {
+                    'ID': int(obj.id),  # Convert to Python int if it's numpy.int32 or similar
+                    'Texture Class':obj.texture_class,  # Same conversion
+                    'Texture': obj.texture,  # Assuming this is already a serializable type
+                    'Current Position': tuple(obj.position),  # Convert to tuple, which should be fine
+                    'Initial Position': tuple(obj.initial_position),  # Same as above
+                    'Casual Probability': int(obj.casual_probability),  # Convert to Python float if necessary
+                    'Movability': bool(obj.movability)  # Ensure it's a native Python boolean
+                }
 
         file_path = f'{BASE_PATH}/digital_mind_log.json'
         # Write the data to a JSON file
@@ -471,8 +513,8 @@ class SearchAndRescueEnv(gym.Env):
         self.TURTLE = p.loadURDF(f"{BASE_PATH}/urdf/most_simple_turtle.urdf", [0, 0, 0])
         self.PLANE = p.loadURDF(f"{BASE_PATH}//urdf/plane_box.urdf")
         self.CRACKED_1 = p.loadTexture(f"{BASE_PATH}/textures/cracked_0052.png")
-        self.MARBLED_1 = p.loadTexture(f"{BASE_PATH}/textures/grooved_0045.png")
-        self.MARBLED_2 = p.loadTexture(f"{BASE_PATH}/textures/marbled_0095.png")
+        self.MARBLED_1 = p.loadTexture(f"{BASE_PATH}/textures/grooved_0051.png")
+        self.MARBLED_2 = p.loadTexture(f"{BASE_PATH}/textures/grooved_0048.png")
         
         self.startPos = [0,0,1]
         self.startOrientation = p.getQuaternionFromEuler([0,0,0])
@@ -482,6 +524,7 @@ class SearchAndRescueEnv(gym.Env):
         self.distance = 100000
         self.last_action = 4 # its in stop action
         self.movability_dict = {0:None,1:None}
+        self.visual_predictions= {}
         
         # Create the Walls 
         self.create_walls()
@@ -489,6 +532,9 @@ class SearchAndRescueEnv(gym.Env):
         # Create the Obstacles
         self.objectIDs = self.create_obstacles()# List of unique IDs for each instance
         self.objectPositions = self.initialized_objects_position(self.objectIDs)
+        
+        for objectID in self.objectIDs:
+            self.visual_predictions[objectID] = []
         
         # Set the Goal to be the position of the 3rd Movable Object for now 
         self.goal_position = self.objectPositions[self.objectIDs[-1]]
@@ -534,7 +580,7 @@ class SearchAndRescueEnv(gym.Env):
             rl_info.append([causal_movability,int(object_delta_x),int(object_delta_y)])
         flattened_rl_info = [item for sublist in rl_info for item in sublist]
         
-        observation = [int(self.robot_position[0]), int(self.robot_position[1]), int(goal_delta_x),int(goal_delta_y)]  + flattened_rl_info #+ list(self.prev_actions)
+        observation = [int(self.robot_position[0]), int(self.robot_position[1]), int(goal_delta_x),int(goal_delta_y)]  + flattened_rl_info + list(self.prev_actions)
         observation = np.array(observation)
         return observation
 
@@ -568,10 +614,10 @@ model = PPO('MlpPolicy', env, verbose=1)
 
 TIMESTEPS = 10000
 iters = 0
-while not done:
+while iters < 10:
     iters += 1
     print(f"[INFO] TimeStep: ({iters}/{TIMESTEPS})")
-    observation,reward,done,info = model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
+    model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
     model.save("ppo_learned")
 
 # # UNIT-TEST

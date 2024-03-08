@@ -1,0 +1,7 @@
+pybullet build time: Nov 28 2023 23:51:11
+INFO:root:Learning structure using 'NOTEARS' optimisation with lasso regularisation.
+WARNING:pgmpy:BayesianModel has been renamed to BayesianNetwork. Please use BayesianNetwork class, BayesianModel will be removed in future.
+BOX-IDS : box2=6 | box3=7
+[INFO] Classified Texture Class : Cracked - UID : 6 - Position : (2, 0, 0) -  1
+XIO:  fatal IO error 11 (Resource temporarily unavailable) on X server ":0"
+      after 6923 requests (6923 known processed) with 0 events remaining.
