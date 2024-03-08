@@ -10,10 +10,6 @@ from collections import deque
 import time
 import warnings
 warnings.filterwarnings("ignore")
-
-from digital_mind import EnvironmentObjectsManager
-from preprocessing import normalise_textures,get_texture_features
-from helpers import distance_3d,calculate_vector,calculate_cos_angle,quaternion_to_forward_vector
 from causalnex.plots import plot_structure, NODE_STYLE, EDGE_STYLE
 from causalnex.network import BayesianNetwork
 from causalnex.structure.notears import from_pandas_lasso
@@ -21,6 +17,11 @@ import pandas as pd
 from stable_baselines3 import PPO
 import logging
 
+# Custom imports
+from digital_mind import EnvironmentObjectsManager
+from preprocessing import normalise_textures,get_texture_features
+from helpers import distance_3d,calculate_vector,calculate_cos_angle,quaternion_to_forward_vector
+from set_test_env import generate_maze_with_objects,visualisemaze
 # Setup basic configuration for logging
 logging.basicConfig(filename='debug.log', level=logging.DEBUG, format='%(asctime)s %(message)s')
 import pdb
@@ -39,6 +40,15 @@ ENV_MANAGER = EnvironmentObjectsManager()
 AGENT_ACTION_LEN = 2000
 p.connect(p.GUI)
 
+height = 20
+width = 20
+num_m = 10 # Movable
+num_i = 10 # Immovable
+num_s = 1 # Start Positions
+
+# map_plan = generate_maze_with_objects(height, width, num_m, num_i,num_s)
+#visualisemaze(map_plan)
+
 def create_or_update_object(detected_object_id,texture_class,detected_x,detected_y,detected_z,detected_texture):
     attributes = {
         'texture': detected_texture,
@@ -55,80 +65,163 @@ class SearchAndRescueEnv(gym.Env):
     def __init__(self):
         super(SearchAndRescueEnv, self).__init__()
         self.action_space = spaces.Discrete(3)  # Forward, Left, Right, Stop
-        self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(10,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(70,), dtype=np.float32)
     
-    def create_walls(self):
+    def create_walls(self,map_plan):
+        # self.wall_ids = []  # Store wall IDs in an attribute for later access
+        # halfExtents = [self.boxHalfLength, self.boxHalfWidth, self.boxHalfHeight]
+        # rgbaColor = [0.5, 0.5, 0.5, 1]
+        # wall_positions_orientations = [
+        #     ([0, 5, 0], [0, 0, 0, 1]),  # North
+        #     ([0, -5, 0], [0, 0, 0, 1]),  # South
+        #     ([5, 0, 0], p.getQuaternionFromEuler([0, 0, 1.5708])),  # East
+        #     ([-5, 0, 0], p.getQuaternionFromEuler([0, 0, 1.5708]))  # West
+        # ]
+        #
+        # for pos, orn in wall_positions_orientations:
+        #     visual_shape_id = p.createVisualShape(p.GEOM_BOX, halfExtents=halfExtents, rgbaColor=rgbaColor)
+        #     collision_shape_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=halfExtents)
+        #     wall_id = p.createMultiBody(baseMass=0, baseVisualShapeIndex=visual_shape_id,
+        #                                 baseCollisionShapeIndex=collision_shape_id, basePosition=pos,
+        #                                 baseOrientation=orn)
+        #     self.wall_ids.append(wall_id)
+        # define ground
+        groundHalfLength = height/2
+        groundHalfWidth = width/2
+        groundHalfHeight = 1
+
+        groundIdVisual = p.createVisualShape(p.GEOM_BOX,
+                                          halfExtents=[groundHalfLength, groundHalfWidth, groundHalfHeight],
+                                            rgbaColor=[1, 1, 1, 1],)
+
+        groundIdCollision = p.createCollisionShape(p.GEOM_BOX,
+                                          halfExtents=[groundHalfLength, groundHalfWidth, groundHalfHeight])
+        p.createMultiBody(baseMass=0,
+                                  baseVisualShapeIndex=groundIdVisual,
+                                  baseCollisionShapeIndex=groundIdCollision,
+                                  basePosition=[height/2,width/2, -1],
+                                  )
+
         self.wall_ids = []  # Store wall IDs in an attribute for later access
-        halfExtents = [self.boxHalfLength, self.boxHalfWidth, self.boxHalfHeight]
-        rgbaColor = [0.5, 0.5, 0.5, 1]
-        wall_positions_orientations = [
-            ([0, 5, 0], [0, 0, 0, 1]),  # North
-            ([0, -5, 0], [0, 0, 0, 1]),  # South
-            ([5, 0, 0], p.getQuaternionFromEuler([0, 0, 1.5708])),  # East
-            ([-5, 0, 0], p.getQuaternionFromEuler([0, 0, 1.5708]))  # West
-        ]
+        # define walls
+        boxHalfLength = 0.5
+        boxHalfWidth = 0.5
+        boxHalfHeight = 1
 
-        for pos, orn in wall_positions_orientations:
-            visual_shape_id = p.createVisualShape(p.GEOM_BOX, halfExtents=halfExtents, rgbaColor=rgbaColor)
-            collision_shape_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=halfExtents)
-            wall_id = p.createMultiBody(baseMass=0, baseVisualShapeIndex=visual_shape_id,
-                                        baseCollisionShapeIndex=collision_shape_id, basePosition=pos,
-                                        baseOrientation=orn)
-            self.wall_ids.append(wall_id)
+        wallsIdVisual = p.createVisualShape(p.GEOM_BOX,
+                                            halfExtents=[boxHalfLength, boxHalfWidth, boxHalfHeight],
+                                            rgbaColor=[0.5, 0.5, 0.5, 1], )
+
+        wallsIdCollision = p.createCollisionShape(p.GEOM_BOX,
+                                                  halfExtents=[boxHalfLength, boxHalfWidth, boxHalfHeight])
+
+        for i in range(0, height):
+            for j in range(0, width):
+                if map_plan[i][j] == "w":
+                    wall_id = p.createMultiBody(baseMass=0,
+                                      baseVisualShapeIndex=wallsIdVisual,
+                                      baseCollisionShapeIndex=wallsIdCollision,
+                                      basePosition=[i, j, 1],
+                                      )
+                    self.wall_ids.append(wall_id)
         
-    def create_obstacles(self):
-        # boxIdVisual1 = p.createVisualShape(p.GEOM_BOX,
-        #                           halfExtents=[0.5, 0.5, 0.5],
-        #                           #rgbaColor=[0.5, 1, 0.5, 1],
-        #                           )
-        boxIdVisual2 = p.createVisualShape(p.GEOM_BOX,
-                                        halfExtents=[0.5, 0.5, 0.5],
-                                        #rgbaColor=[0.5, 1, 0.5, 1],
-                                        )
-        boxIdVisual3 = p.createVisualShape(p.GEOM_BOX,
-                                        halfExtents=[0.5, 0.5, 0.5],
-                                        #rgbaColor=[0.5, 1, 0.5, 1],
-                                        )
+    def create_obstacles(self,map_plan):
+
+        # boxIdVisual2 = p.createVisualShape(p.GEOM_BOX,
+        #                                 halfExtents=[0.5, 0.5, 0.5],
+        #                                 #rgbaColor=[0.5, 1, 0.5, 1],
+        #                                 )
+        # boxIdVisual3 = p.createVisualShape(p.GEOM_BOX,
+        #                                 halfExtents=[0.5, 0.5, 0.5],
+        #                                 #rgbaColor=[0.5, 1, 0.5, 1],
+        #                                 )
+        # boxIdCollision = p.createCollisionShape(p.GEOM_BOX,
+        #                                 halfExtents=[0.5, 0.5, 0.5])
+        #
+        # box2 = p.createMultiBody(baseMass=1000,
+        #                     baseVisualShapeIndex=boxIdVisual2,
+        #                     baseCollisionShapeIndex=boxIdCollision,
+        #                     basePosition=[2, 0, 1],
+        #                     baseOrientation=p.getQuaternionFromEuler([0,0,0])
+        #                 )
+        # p.changeVisualShape(box2,-1 ,textureUniqueId=self.MARBLED_1)
+        #
+        # box3 = p.createMultiBody(baseMass=1,
+        #                     baseVisualShapeIndex=boxIdVisual3,
+        #                     baseCollisionShapeIndex=boxIdCollision,
+        #                     basePosition=[-2, 0 , 1],
+        #                     baseOrientation=p.getQuaternionFromEuler([0,0,0])
+        #                 )
+        # p.changeVisualShape(box3,-1 ,textureUniqueId=self.MARBLED_2)
+        #
+        # print(f'BOX-IDS : box2={box2} | box3={box3}')
+        #
+        # define movableobjects
+        object_ids = []
+        boxIdVisual = p.createVisualShape(p.GEOM_BOX,
+                                          halfExtents=[0.5, 0.5, 0.5],
+                                          #rgbaColor=[0.5, 1, 0.5, 1]
+                                          )
+
         boxIdCollision = p.createCollisionShape(p.GEOM_BOX,
-                                        halfExtents=[0.5, 0.5, 0.5])
-        
-        # box1 =p.createMultiBody(baseMass=1,
-        #             baseVisualShapeIndex=boxIdVisual1,
-        #             baseCollisionShapeIndex=boxIdCollision,
-        #             basePosition=[0, 2, 1],
-        #             baseOrientation=p.getQuaternionFromEuler([0,0,0])
-        #           )
-        # p.changeVisualShape(box1,-1 ,textureUniqueId=self.CRACKED_1)
+                                                halfExtents=[0.5, 0.5, 0.5])
 
-        box2 = p.createMultiBody(baseMass=1000,
-                            baseVisualShapeIndex=boxIdVisual2,
-                            baseCollisionShapeIndex=boxIdCollision,
-                            basePosition=[2, 0, 1],
-                            baseOrientation=p.getQuaternionFromEuler([0,0,0])
-                        )
-        p.changeVisualShape(box2,-1 ,textureUniqueId=self.MARBLED_1)
+        # define immovableobjects
+        immovableIdVisual = p.createVisualShape(p.GEOM_BOX,
+                                                halfExtents=[0.5, 0.5, 0.5],
+                                                #rgbaColor=[1, 0.5, 0.5, 1]
+                                                )
 
-        box3 = p.createMultiBody(baseMass=1,
-                            baseVisualShapeIndex=boxIdVisual3,
-                            baseCollisionShapeIndex=boxIdCollision,
-                            basePosition=[-2, 0 , 1],
-                            baseOrientation=p.getQuaternionFromEuler([0,0,0])
-                        )
-        p.changeVisualShape(box3,-1 ,textureUniqueId=self.MARBLED_2)
-        # print(f'BOX-IDS : box1={box1} | box2={box2} | box3={box3}')
-        print(f'BOX-IDS : box2={box2} | box3={box3}')
-        
-        # return [box1,box2,box3] # returns the unique id for each obstacle created
-        return [box2,box3] # returns the unique id for each obstacle created
+        immovableIdCollision = p.createCollisionShape(p.GEOM_BOX,
+                                                      halfExtents=[0.5, 0.5, 0.5])
+
+        goalIdVisual = p.createVisualShape(p.GEOM_BOX,
+                                          halfExtents=[0.5, 0.5, 3],
+                                          rgbaColor=[0, 1, 0, 1])
+
+        for i in range(0, height):
+            for j in range(0, width):
+                if map_plan[i][j] == "m":
+                    #id_num = int(str(i) + str(j))
+                    id_num = p.createMultiBody(baseMass=5,
+                                      baseVisualShapeIndex=boxIdVisual,
+                                      baseCollisionShapeIndex=boxIdCollision,
+                                      basePosition=[i, j, 0.5],
+                                      )
+                    p.changeVisualShape(id_num, -1, textureUniqueId=self.MARBLED_1)
+                    object_ids.append(id_num)
+
+                if map_plan[i][j] == "i":
+                    #id_num = int(str(i) + str(j))
+                    id_num = p.createMultiBody(baseMass=0,
+                                      baseVisualShapeIndex=immovableIdVisual,
+                                      baseCollisionShapeIndex=immovableIdCollision,
+                                      basePosition=[i, j, 0.5],
+                                      )
+                    p.changeVisualShape(id_num, -1, textureUniqueId=self.MARBLED_2)
+                    object_ids.append(id_num)
+
+                if map_plan[i][j] == "o":
+                    self.goal_id = p.createMultiBody(baseMass=0,
+                                      baseVisualShapeIndex=goalIdVisual,
+                                      #baseCollisionShapeIndex=goalIdCollision,
+                                      basePosition=[i, j, 3],
+                                      )
+
+        print(object_ids)
+        return object_ids # returns the unique id for each obstacle created
     
     def initialized_objects_position(self,objectIDs):
         # Dictionary to store positions for each object ID
         objectPositions = {}
-        for objID in objectIDs:
-            pos, orn = p.getBasePositionAndOrientation(objID)
-            # pos = (int(pos[0]),int(pos[1]),int(pos[2]))
-            objectPositions[objID] = pos
-        
+        if not isinstance(objectIDs,int):
+            for objID in objectIDs:
+                pos, orn = p.getBasePositionAndOrientation(objID)
+                # pos = (int(pos[0]),int(pos[1]),int(pos[2]))
+                objectPositions[objID] = pos
+        else:
+            pos, orn = p.getBasePositionAndOrientation(objectIDs)
+            objectPositions = pos
         return objectPositions
     
     def translate_action(self,action):
@@ -386,7 +479,7 @@ class SearchAndRescueEnv(gym.Env):
     def step(self, action):
         self.prev_actions.append(action)
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
-        
+
         # Check objects vicinity and Then translate actions
         sensing_info = self.start_sensing_module_and_initializing_digital_mind()
         self.update_moability_in_digital_mind_using_last_action(sensing_info)
@@ -462,13 +555,24 @@ class SearchAndRescueEnv(gym.Env):
             json.dump(objects_data, json_file, indent=4)
             
     def reset(self):
+        # Generating the random map
+        map_plan = generate_maze_with_objects(height, width, num_m, num_i, num_s)
+
+        # Reseting the Sim
         p.resetSimulation()
         p.setGravity(0, 0, -10)
+        p.resetDebugVisualizerCamera(cameraDistance=20, cameraYaw=-90, cameraPitch=-91,
+                                            cameraTargetPosition=[9, 9, 0])
         
         # enable real time simulation
-        p.setRealTimeSimulation(1)  
-        
-        self.TURTLE = p.loadURDF(f"{BASE_PATH}/urdf/most_simple_turtle.urdf", [0, 0, 0])
+        p.setRealTimeSimulation(1)
+        for i in range(0, height):
+            for j in range(0, width):
+                if map_plan[i][j] == "s":
+                            startx=i
+                            starty=j
+        print(f"StartX:{startx}, StartY{starty}")
+        self.TURTLE = p.loadURDF(f"{BASE_PATH}/urdf/most_simple_turtle.urdf", [startx, starty, 0])
         self.PLANE = p.loadURDF(f"{BASE_PATH}//urdf/plane_box.urdf")
         self.CRACKED_1 = p.loadTexture(f"{BASE_PATH}/textures/cracked_0052.png")
         self.MARBLED_1 = p.loadTexture(f"{BASE_PATH}/textures/grooved_0045.png")
@@ -484,14 +588,14 @@ class SearchAndRescueEnv(gym.Env):
         self.movability_dict = {0:None,1:None}
         
         # Create the Walls 
-        self.create_walls()
+        self.create_walls(map_plan)
         
         # Create the Obstacles
-        self.objectIDs = self.create_obstacles()# List of unique IDs for each instance
+        self.objectIDs = self.create_obstacles(map_plan)# List of unique IDs for each instance
         self.objectPositions = self.initialized_objects_position(self.objectIDs)
-        
+        self.goalPosition = self.initialized_objects_position(self.goal_id)
         # Set the Goal to be the position of the 3rd Movable Object for now 
-        self.goal_position = self.objectPositions[self.objectIDs[-1]]
+        self.goal_position = self.goalPosition#self.objectPositions[self.objectIDs[-1]]
         
         # Setup the Agent 
         self.robot_position,self.camera_position,self.robot_orientation = self.setup_agent()
@@ -534,8 +638,9 @@ class SearchAndRescueEnv(gym.Env):
             rl_info.append([causal_movability,int(object_delta_x),int(object_delta_y)])
         flattened_rl_info = [item for sublist in rl_info for item in sublist]
         
-        observation = [int(self.robot_position[0]), int(self.robot_position[1]), int(goal_delta_x),int(goal_delta_y)]  + flattened_rl_info #+ list(self.prev_actions)
+        observation = [int(self.robot_position[0]), int(self.robot_position[1]), int(goal_delta_x),int(goal_delta_y)] + flattened_rl_info #+ list(self.prev_actions)
         observation = np.array(observation)
+
         return observation
 
     def render(self):
