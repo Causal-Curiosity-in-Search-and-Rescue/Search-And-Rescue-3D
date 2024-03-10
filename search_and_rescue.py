@@ -22,7 +22,7 @@ from stable_baselines3 import PPO
 import logging
 
 # Setup basic configuration for logging
-logging.basicConfig(filename='debug.log', level=logging.info,filemode='w', format='%(asctime)s %(message)s')
+logging.basicConfig(filename='debug.log', level=logging.INFO,filemode='w', format='%(asctime)s %(message)s')
 
 # LOAD THE URDF FILES AND TEXTURES
 BASE_PATH = os.path.join(os.getcwd(),"resources")
