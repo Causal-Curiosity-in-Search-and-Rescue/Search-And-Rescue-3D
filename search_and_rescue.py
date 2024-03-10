@@ -23,7 +23,6 @@ import logging
 
 # Setup basic configuration for logging
 logging.basicConfig(filename='debug.log', level=logging.DEBUG, format='%(asctime)s %(message)s')
-import pdb
 
 # LOAD THE URDF FILES AND TEXTURES
 BASE_PATH = os.path.join(os.getcwd(),"resources")
@@ -308,6 +307,7 @@ class SearchAndRescueEnv(gym.Env):
         prediction_prob = np.mean(self.visual_predictions[uid])
         print(f"[DEBUG] Mean of visual Predictions for {uid} then {prediction_prob}")
         if len(self.visual_predictions[uid]) > 4:
+            logging.debug(f"[DEBUG] Mean of visual Predictions for {uid} then {prediction_prob}")
             if prediction_prob > 0.8:
                 return 1
             else:
@@ -378,7 +378,7 @@ class SearchAndRescueEnv(gym.Env):
                     #     movability_dict[1] = 1
                 print('[INFO] Movability Dictionary: ',self.movability_dict)                
                 if (self.movability_dict[0] != None) and (self.movability_dict[1] != None):
-                    print('[METRIC] Causal Graph Created - Number of Interactions Required : ',self.causal_interaction_count) # Evaluation Metric
+                    logging.debug('[METRIC] Causal Graph Created - Number of Interactions Required : ',self.causal_interaction_count) # Evaluation Metric
                     movability = np.array([self.movability_dict[0],self.movability_dict[1]])
                 else:
                     movability = np.array([1, 1])# it will set everything to be movable on the truth table
@@ -461,7 +461,7 @@ class SearchAndRescueEnv(gym.Env):
         
         collision_info = self.check_collision_with_walls()
         if collision_info['has_collided']:
-            print('[INFO] : Has Colided ')
+            logging.debug('[INFO] Has Colided With Wall')
             self.reward -= 50
             # self.done = True  
         
@@ -469,7 +469,7 @@ class SearchAndRescueEnv(gym.Env):
         # handle collision with goal - Set a high reward and set done to true
         goal_collision_info = self.check_collision_with_goal_and_update_state(self.robot_position)
         if goal_collision_info['reached_goal']:
-            print('[INFO] Has Reached Goal ')
+            logging.debug('[INFO] Has Reached Goal ')
             self.reward += 200
             self.done = True
         
@@ -478,13 +478,13 @@ class SearchAndRescueEnv(gym.Env):
         
         # Check if Number of Steps Greater than Max Steps If So Set Episode to be Done - to Prevent the agent to Wander The environment indefinetly during learning
         if self.current_step > self.max_steps:
-            print('[INFO] Maximum Steps Reached .. Ending the episode')
+            logging.debug('[INFO] Maximum Steps Reached .. Ending the episode')
             self.done = True
             
         # Calculate The Cummulative Reward
         self.cumulative_reward = self.reward
         if self.done:
-            print(f'[INFO] Episode Ending with Cumlative Reward : {self.cumulative_reward}') # This metric can be used to compare how well the agent performs with and without causal and digital mind
+            logging.debug(f'[INFO] Episode Ending with Cumlative Reward : {self.cumulative_reward}') # This metric can be used to compare how well the agent performs with and without causal and digital mind
         
         goal_delta_x = self.goal_position[0] - self.robot_position[0]
         goal_delta_y = self.goal_position[1] - self.robot_position[1]
@@ -644,9 +644,7 @@ if not os.path.exists(logdir):
 
 env = SearchAndRescueEnv()
 # Then, sprinkle logging statements in your code:
-logging.debug('About to reset environment')
 env.reset()
-logging.debug('Environment reset successfully')
 done = False
 model = PPO('MlpPolicy', env, verbose=1)
 
