@@ -483,8 +483,8 @@ class SearchAndRescueEnv(gym.Env):
         collision_info = self.check_collision_with_walls()
         if collision_info['has_collided']:
             logging.info('[INFO] Has Colided With Wall')
-            self.reward -= 50
-            # self.done = True  
+            self.reward -= 10
+            self.done = True  
         
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         # handle collision with goal - Set a high reward and set done to true
@@ -611,7 +611,7 @@ class SearchAndRescueEnv(gym.Env):
         self.current_step = 0
         self.cumulative_reward = 0
         self.goal_reached = False
-        self.max_steps = 1000
+        self.max_steps = 500
         self.movability_predictions = {}
         for objectID in self.objectIDs:
             self.movability_predictions[objectID] = []
