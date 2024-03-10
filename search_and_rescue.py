@@ -447,8 +447,12 @@ class SearchAndRescueEnv(gym.Env):
         collision_info = {
             'reached_goal': False
         }
-        if ((int(self.goal_position[0]) - 0.01) < int(agent_position[0] )< (int(self.goal_position[0]) + 0.01)) and ((int(self.goal_position[0]) - 0.01) < int(agent_position[1]) < (int(self.goal_position[0]) + 0.01)): #and (agent_position[2] == self.goal_position[2]):
-            collision_info['reached_goal']=True
+        # Retrieve all contact points
+        contact_points = p.getContactPoints(bodyA=self.TURTLE)
+        for contact in contact_points:
+            if contact[2] in [self.goalIDs]: 
+        # if ((int(self.goal_position[0]) - 0.01) < int(agent_position[0] )< (int(self.goal_position[0]) + 0.01)) and ((int(self.goal_position[0]) - 0.01) < int(agent_position[1]) < (int(self.goal_position[0]) + 0.01)): #and (agent_position[2] == self.goal_position[2]):
+                collision_info['reached_goal']=True
         
         # print(f'Goal Position : {int(self.goal_position[0])} - {int(self.goal_position[1])}')
         # print(f'Agent position : {int(agent_position[0])} - {int(agent_position[1])}')
