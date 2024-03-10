@@ -592,7 +592,7 @@ class SearchAndRescueEnv(gym.Env):
         self.current_step = 0
         self.cumulative_reward = 0
         self.goal_reached = False
-        self.max_steps = 100
+        self.max_steps = 1000
         
         self.prev_actions = deque(maxlen=AGENT_ACTION_LEN)
         for i in range(AGENT_ACTION_LEN):
