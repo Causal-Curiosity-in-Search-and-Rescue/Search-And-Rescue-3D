@@ -307,7 +307,7 @@ class SearchAndRescueEnv(gym.Env):
         print(f'[DEBUG] Length of Current Visual Predictions for {uid} then {len(self.visual_predictions[uid])}')
         prediction_prob = np.mean(self.visual_predictions[uid])
         print(f"[DEBUG] Mean of visual Predictions for {uid} then {prediction_prob}")
-        if len(self.visual_predictions[uid] > 4):
+        if len(self.visual_predictions[uid]) > 4:
             if prediction_prob > 0.8:
                 return 1
             else:
