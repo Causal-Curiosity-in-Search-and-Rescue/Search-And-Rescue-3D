@@ -54,6 +54,11 @@ class SearchAndRescueEnv(gym.Env):
         super(SearchAndRescueEnv, self).__init__()
         self.action_space = spaces.Discrete(3)  # Forward, Left, Right, Stop
         self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(10+AGENT_ACTION_LEN,), dtype=np.float32)
+        
+        # Initial Params
+        self.movability_dict = {0:None,1:None}
+        self.visual_predictions= {}
+        self.causal_interaction_count = 0
     
     def create_walls(self):
         self.wall_ids = []  # Store wall IDs in an attribute for later access
@@ -579,8 +584,6 @@ class SearchAndRescueEnv(gym.Env):
         self.boxHalfHeight = 3
         self.distance = 100000
         self.last_action = 4 # its in stop action
-        self.movability_dict = {0:None,1:None}
-        self.visual_predictions= {}
         
         # Create the Walls 
         self.create_walls()
@@ -605,7 +608,6 @@ class SearchAndRescueEnv(gym.Env):
         goal_delta_y = self.goal_position[1] - self.robot_position[1]
         
         # Evaluation Init
-        self.causal_interaction_count = 0
         self.current_step = 0
         self.cumulative_reward = 0
         self.goal_reached = False
