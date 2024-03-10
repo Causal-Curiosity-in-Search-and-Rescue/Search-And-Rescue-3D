@@ -36,7 +36,7 @@ CV_SCALER = load(f"{BASE_PATH}/models/unsup_txture_clsf_scaler.joblib")
 ENV_MANAGER = EnvironmentObjectsManager()
 
 # Define How Long the Robot should be Operational in the Environment
-AGENT_ACTION_LEN = 2000
+AGENT_ACTION_LEN = 100
 p.connect(p.GUI)
 
 def create_or_update_object(detected_object_id,texture_class,detected_x,detected_y,detected_z,detected_texture):
@@ -307,10 +307,13 @@ class SearchAndRescueEnv(gym.Env):
         print(f'[DEBUG] Length of Current Visual Predictions for {uid} then {len(self.visual_predictions[uid])}')
         prediction_prob = np.mean(self.visual_predictions[uid])
         print(f"[DEBUG] Mean of visual Predictions for {uid} then {prediction_prob}")
-        if prediction_prob > 0.8:
-            return 1
+        if len(self.visual_predictions[uid] > 4):
+            if prediction_prob > 0.8:
+                return 1
+            else:
+                return 0
         else:
-            return 0
+            return None # This allows for Predictions to be more stable
         
     def check_if_object_position_has_changed(self): # Relative to seeing if object has moved as a result of robot moving against the object its facing and comparing previous positions
         if (((self.previous_position[0]-0.01) < self.robot_position[0] < (self.previous_position[0]+0.01)) and ((self.previous_position[1]-0.01) < self.robot_position[1] < (self.previous_position[1]+0.01))):
@@ -356,23 +359,26 @@ class SearchAndRescueEnv(gym.Env):
                     if obj.texture_class == 0:
                         if obj.movability != None:
                             # print(f'For obj.id : {obj.id} - Texture : {obj.texture_class} - movability : {obj.movability}')
+                            self.causal_interaction_count += 1
                             self.movability_dict[0] = int(obj.movability)
                         else:
-                            self.movability_dict[0] = 1
+                            self.movability_dict[0] = None
                     # else:
                     #     movability_dict[0] = 1
 
                 if self.movability_dict[1] == None:
                     if obj.texture_class == 1:
                         if obj.movability != None:
+                            self.causal_interaction_count += 1
                             # print(f'For obj.id : {obj.id} - Texture : {obj.texture_class} - movability : {obj.movability}')
                             self.movability_dict[1] = int(obj.movability)
                         else:
-                            self.movability_dict[1] = 1
+                            self.movability_dict[1] = None
                     # else:
                     #     movability_dict[1] = 1
                 print('[INFO] Movability Dictionary: ',self.movability_dict)                
                 if (self.movability_dict[0] != None) and (self.movability_dict[1] != None):
+                    print('[METRIC] Causal Graph Created - Number of Interactions Required : ',self.causal_interaction_count) # Evaluation Metric
                     movability = np.array([self.movability_dict[0],self.movability_dict[1]])
                 else:
                     movability = np.array([1, 1])# it will set everything to be movable on the truth table
@@ -455,19 +461,30 @@ class SearchAndRescueEnv(gym.Env):
         
         collision_info = self.check_collision_with_walls()
         if collision_info['has_collided']:
-            # print('[INFO] : Has Colided ')
-            self.reward = -10
-            self.done = True
+            print('[INFO] : Has Colided ')
+            self.reward -= 50
+            # self.done = True  
         
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         # handle collision with goal - Set a high reward and set done to true
         goal_collision_info = self.check_collision_with_goal_and_update_state(self.robot_position)
         if goal_collision_info['reached_goal']:
-            # print('[INFO] Has Reached Goal ')
-            self.reward = 200
+            print('[INFO] Has Reached Goal ')
+            self.reward += 200
             self.done = True
         
         self.last_action = action
+        self.current_step += 1
+        
+        # Check if Number of Steps Greater than Max Steps If So Set Episode to be Done - to Prevent the agent to Wander The environment indefinetly during learning
+        if self.current_step > self.max_steps:
+            print('[INFO] Maximum Steps Reached .. Ending the episode')
+            self.done = True
+            
+        # Calculate The Cummulative Reward
+        self.cumulative_reward = self.reward
+        if self.done:
+            print(f'[INFO] Episode Ending with Cumlative Reward : {self.cumulative_reward}') # This metric can be used to compare how well the agent performs with and without causal and digital mind
         
         goal_delta_x = self.goal_position[0] - self.robot_position[0]
         goal_delta_y = self.goal_position[1] - self.robot_position[1]
@@ -559,10 +576,7 @@ class SearchAndRescueEnv(gym.Env):
         
         for objectID in self.objectIDs:
             self.visual_predictions[objectID] = []
-        
-        # # Set the Goal to be the position of the 3rd Movable Object for now 
-        # self.goal_position = self.objectPositions[self.objectIDs[-1]]
-        
+       
         # Setup the Agent 
         self.robot_position,self.camera_position,self.robot_orientation = self.setup_agent()
         self.previous_position = self.robot_position
@@ -574,12 +588,12 @@ class SearchAndRescueEnv(gym.Env):
         goal_delta_x = self.goal_position[0] - self.robot_position[0]
         goal_delta_y = self.goal_position[1] - self.robot_position[1]
         
-        # TODO For Future to Improve the Observation Space using Euclidean Distance
-        # goal_distance = distance_3d(self.goal_position,self.robot_position)
-        # vector_to_object = calculate_vector(self.robot_position, self.goal_position)
-        # cos_angle = calculate_cos_angle(quaternion_to_forward_vector(self.robot_orientation), vector_to_object)
-        # if goal_distance <=1 and cos_angle < -0.3:
-        #     goal_
+        # Evaluation Init
+        self.causal_interaction_count = 0
+        self.current_step = 0
+        self.cumulative_reward = 0
+        self.goal_reached = False
+        self.max_steps = 100
         
         self.prev_actions = deque(maxlen=AGENT_ACTION_LEN)
         for i in range(AGENT_ACTION_LEN):
