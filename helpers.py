@@ -27,7 +27,7 @@ def quaternion_to_forward_vector(quaternion):
     fz = 1 - 2 * (x*x + y*y)
     return np.array([fx, fy, fz])
 
-def generate_maze_with_objects(height, width, num_m, num_i,num_s,maze1=map1):
+def generate_maze_with_objects(height, width, num_m, num_i,num_s,maze1):
     maze = copy.deepcopy(maze1)
     # Generate random positions for 'm'
     for _ in range(num_m):
