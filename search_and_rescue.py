@@ -319,6 +319,16 @@ class SearchAndRescueEnv(gym.Env):
             return False
         else:
             return True
+        
+    def control_movability_update(self,uid):
+        if len(self.movability_predictions[uid]) > 4: # number of minimum interactions for it to update of movability
+            movability_prob =  np.mean(self.movability_predictions[uid])
+            if movability_prob > 0.8:
+                return 1
+            else:
+                return 0
+        else:
+            return None
     
     def update_moability_in_digital_mind_using_last_action(self,sensing_info):
         for idx in range(len(sensing_info)):
@@ -329,13 +339,13 @@ class SearchAndRescueEnv(gym.Env):
                         for obj_id, obj in ENV_MANAGER.objects.items():
                             if obj.id == info['uid']:
                                 if obj.movability == None:
-                                    obj.movability = False
+                                    obj.movability = self.control_movability_update(info['uid'])
                                 
                     if info['object_position_has_changed']:
                         for obj_id, obj in ENV_MANAGER.objects.items():
                             if obj.id == info['uid']:
                                 if obj.movability == None:
-                                    obj.movability = True
+                                    obj.movability = self.control_movability_update(info['uid'])
         
     def store_causal_probability(self,df):
         texture_0_movability = df[df['Texture'] == 0]['Movability_1'].iloc[0]
@@ -596,6 +606,9 @@ class SearchAndRescueEnv(gym.Env):
         self.cumulative_reward = 0
         self.goal_reached = False
         self.max_steps = 1000
+        self.movability_predictions = {}
+        for objectID in self.objectIDs:
+            self.movability_predictions[objectID] = []
         
         self.prev_actions = deque(maxlen=AGENT_ACTION_LEN)
         for i in range(AGENT_ACTION_LEN):
