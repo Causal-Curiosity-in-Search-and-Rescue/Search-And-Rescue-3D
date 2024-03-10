@@ -356,44 +356,44 @@ class SearchAndRescueEnv(gym.Env):
             else:
                 obj.casual_probability = int(texture_1_movability)
              
-    def casual_reasoning_for_object_movability(self,distance,cos_angle): # to be called and used in step
+    def casual_reasoning_for_object_movability(self): # to be called and used in step
         texture = np.array([0,1])
         movability = np.array([1, 1])
-        if distance<=1 and cos_angle < -0.30: # Robot is facing the object 
-            for obj_id, obj in ENV_MANAGER.objects.items():
-                if obj.movability == None:
-                    movability = np.array([1, 1])# it will set everything to be movable on the truth table
-                else:
-                    if self.movability_dict[0] == None:
-                        if obj.texture_class == 0:
-                            if obj.movability != None:
-                                # print(f'For obj.id : {obj.id} - Texture : {obj.texture_class} - movability : {obj.movability}')
-                                self.causal_interaction_count += 1
-                                self.movability_dict[0] = int(obj.movability)
-                            else:
-                                self.movability_dict[0] = None
-                        # else:
-                        #     movability_dict[0] = 1
+        # if distance<=1 and cos_angle < -0.30: # Robot is facing the object 
+        for obj_id, obj in ENV_MANAGER.objects.items():
+            if obj.movability == None:
+                movability = np.array([1, 1])# it will set everything to be movable on the truth table
+            else:
+                if self.movability_dict[0] == None:
+                    if obj.texture_class == 0:
+                        if obj.movability != None:
+                            # print(f'For obj.id : {obj.id} - Texture : {obj.texture_class} - movability : {obj.movability}')
+                            self.causal_interaction_count += 1
+                            self.movability_dict[0] = int(obj.movability)
+                        else:
+                            self.movability_dict[0] = None
+                    # else:
+                    #     movability_dict[0] = 1
 
-                    if self.movability_dict[1] == None:
-                        if obj.texture_class == 1:
-                            if obj.movability != None:
-                                self.causal_interaction_count += 1
-                                # print(f'For obj.id : {obj.id} - Texture : {obj.texture_class} - movability : {obj.movability}')
-                                self.movability_dict[1] = int(obj.movability)
-                            else:
-                                self.movability_dict[1] = None
-                        # else:
-                        #     movability_dict[1] = 1
-                    print('[INFO] Movability Dictionary: ',self.movability_dict)                
-                    
-                    if (self.movability_dict[0] != None) and (self.movability_dict[1] != None):
-                        logging.info(f'[METRIC] Causal Graph Created - Number of Interactions Required : {self.causal_interaction_count}') # Evaluation Metric
-                        movability = np.array([self.movability_dict[0],self.movability_dict[1]])
-                    else:
-                        movability = np.array([1, 1])# it will set everything to be movable on the truth table
-        else:
-            movability = np.array([1, 1])# it will set everything to be movable on the truth table
+                if self.movability_dict[1] == None:
+                    if obj.texture_class == 1:
+                        if obj.movability != None:
+                            self.causal_interaction_count += 1
+                            # print(f'For obj.id : {obj.id} - Texture : {obj.texture_class} - movability : {obj.movability}')
+                            self.movability_dict[1] = int(obj.movability)
+                        else:
+                            self.movability_dict[1] = None
+                    # else:
+                    #     movability_dict[1] = 1
+                print('[INFO] Movability Dictionary: ',self.movability_dict)                
+                
+                if (self.movability_dict[0] != None) and (self.movability_dict[1] != None):
+                    logging.info(f'[METRIC] Causal Graph Created - Number of Interactions Required : {self.causal_interaction_count}') # Evaluation Metric
+                    movability = np.array([self.movability_dict[0],self.movability_dict[1]])
+                else:
+                    movability = np.array([1, 1])# it will set everything to be movable on the truth table
+        # else:
+        #     movability = np.array([1, 1])# it will set everything to be movable on the truth table
         n = 100
         aug_texture = np.tile(texture,n)
         aug_movability = np.tile(movability,n)
@@ -462,7 +462,7 @@ class SearchAndRescueEnv(gym.Env):
         # Check objects vicinity and Then translate actions
         sensing_info = self.start_sensing_module_and_initializing_digital_mind()
         self.update_moability_in_digital_mind_using_last_action(sensing_info)
-        self.casual_reasoning_for_object_movability(sensing_info['distance'],sensing_info['cos_angle'])
+        self.casual_reasoning_for_object_movability()
        
         self.previous_position = self.robot_position
         
