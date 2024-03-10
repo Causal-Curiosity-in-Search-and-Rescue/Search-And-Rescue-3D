@@ -332,9 +332,9 @@ class SearchAndRescueEnv(gym.Env):
     
     def apply_thresholding(self,uid,current_prediction):
         self.visual_predictions[uid].append(current_prediction)
-        print(f'[DEBUG] Length of Current Visual Predictions for {uid} then {len(self.visual_predictions[uid])}')
+        # print(f'[DEBUG] Length of Current Visual Predictions for {uid} then {len(self.visual_predictions[uid])}')
         prediction_prob = np.mean(self.visual_predictions[uid])
-        print(f"[DEBUG] Mean of visual Predictions for {uid} then {prediction_prob}")
+        # print(f"[DEBUG] Mean of visual Predictions for {uid} then {prediction_prob}")
         if len(self.visual_predictions[uid]) > 4:
             logging.info(f"[DEBUG] Mean of visual Predictions for {uid} then {prediction_prob}")
             if prediction_prob > 0.8:
@@ -415,7 +415,7 @@ class SearchAndRescueEnv(gym.Env):
                             self.movability_dict[1] = None
                     # else:
                     #     movability_dict[1] = 1
-                print('[INFO] Movability Dictionary: ',self.movability_dict)                
+                logging.info(f'Movability Dictionary: {self.movability_dict}')                
                 
                 if (self.movability_dict[0] != None) and (self.movability_dict[1] != None):
                     logging.info(f'[METRIC] Causal Graph Created - Number of Interactions Required : {self.causal_interaction_count}') # Evaluation Metric
