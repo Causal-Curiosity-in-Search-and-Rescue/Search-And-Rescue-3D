@@ -647,6 +647,7 @@ env = SearchAndRescueEnv()
 env.reset()
 done = False
 model = PPO('MlpPolicy', env, verbose=1)
+logging.debug('[INFO] Learning Started For RL with Causal and Digital Mind')
 
 TIMESTEPS = 10000
 iters = 0
