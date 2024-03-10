@@ -1,3 +1,8 @@
+import logging
+# Setup basic configuration for logging
+logging.basicConfig(filename='debug.log', level=logging.INFO,filemode='w', format='%(asctime)s %(message)s')
+import warnings
+warnings.filterwarnings("ignore")
 import gym
 import json
 import os 
@@ -8,9 +13,6 @@ import math
 from joblib import load
 from collections import deque
 import time
-import warnings
-warnings.filterwarnings("ignore")
-
 from digital_mind import EnvironmentObjectsManager
 from preprocessing import normalise_textures,get_texture_features
 from helpers import distance_3d,calculate_vector,calculate_cos_angle,quaternion_to_forward_vector
@@ -19,10 +21,7 @@ from causalnex.network import BayesianNetwork
 from causalnex.structure.notears import from_pandas_lasso
 import pandas as pd 
 from stable_baselines3 import PPO
-import logging
 
-# Setup basic configuration for logging
-logging.basicConfig(filename='debug.log', level=logging.INFO,filemode='w', format='%(asctime)s %(message)s')
 
 # LOAD THE URDF FILES AND TEXTURES
 BASE_PATH = os.path.join(os.getcwd(),"resources")
