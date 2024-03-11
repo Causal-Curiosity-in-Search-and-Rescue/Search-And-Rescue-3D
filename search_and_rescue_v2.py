@@ -355,7 +355,7 @@ class SearchAndRescueEnv(gym.Env):
                             'distance': distance,
                             'cos_angle':cos_angle,
                             'is_facing_object':False,
-                            'object_position_has_changed':self.has_object_moved(uid,pos),
+                            'object_position_has_changed':False,
                             'current_visual_prediction':thresholded_prediction
                         }
                     )
@@ -391,6 +391,7 @@ class SearchAndRescueEnv(gym.Env):
             return True
         
     def has_object_moved(self, uid, new_position, movement_threshold=0.05):
+        pdb.set_trace()
         initial_position = self.objectPositions[uid]
         # Calculate the distance moved
         distance_moved = np.linalg.norm(np.array(initial_position) - np.array(new_position))
