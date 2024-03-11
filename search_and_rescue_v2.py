@@ -706,7 +706,11 @@ class SearchAndRescueEnv(gym.Env):
         #         object_delta_y = self.objectPositions[objectID][1] - self.robot_position[1]
         #     rl_info.append([causal_movability,int(object_delta_x),int(object_delta_y)])
         # flattened_rl_info = [item for sublist in rl_info for item in sublist]
+        logging.info(f'Retained Movability Knowledge : {self.movability_predictions} \n')
+        logging.info(f'Retained Movability Predictions : {self.movability_dict}')
+        logging.info(f'Retained Visual Prediction Knowledge : {self.visual_predictions} \n')
         
+                
         observation = [int(self.robot_position[0]), int(self.robot_position[1]), goal_delta]  + list(self.prev_actions) #+ flattened_rl_info
         observation = np.array(observation)
         return observation
