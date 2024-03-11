@@ -346,7 +346,7 @@ class SearchAndRescueEnv(gym.Env):
                             'distance': distance,
                             'cos_angle':cos_angle,
                             'is_facing_object':True,
-                            'object_position_has_changed':self.check_if_object_position_has_changed(),
+                            'object_position_has_changed':self.has_object_moved(uid,pos),
                             'current_visual_prediction':thresholded_prediction
                         }
                     )
@@ -357,7 +357,7 @@ class SearchAndRescueEnv(gym.Env):
                             'distance': distance,
                             'cos_angle':cos_angle,
                             'is_facing_object':False,
-                            'object_position_has_changed':self.check_if_object_position_has_changed(),
+                            'object_position_has_changed':self.has_object_moved(uid,pos),
                             'current_visual_prediction':thresholded_prediction
                         }
                     )
@@ -388,9 +388,17 @@ class SearchAndRescueEnv(gym.Env):
     
     def check_if_object_position_has_changed(self): # Relative to seeing if object has moved as a result of robot moving against the object its facing and comparing previous positions
         if (((self.previous_position[0]-0.01) < self.robot_position[0] < (self.previous_position[0]+0.01)) and ((self.previous_position[1]-0.01) < self.robot_position[1] < (self.previous_position[1]+0.01))):
-            return True
-        else:
             return False
+        else:
+            return True
+        
+    def has_object_moved(self, uid, new_position, movement_threshold=0.05):
+        initial_position = self.objectPositions[uid]
+        # Calculate the distance moved
+        distance_moved = np.linalg.norm(np.array(initial_position) - np.array(new_position))
+
+        # Check if the distance moved is greater than the threshold
+        return distance_moved > movement_threshold
     
     def control_movability_update(self,uid):
         if len(self.movability_predictions[uid]) > 4: # number of minimum interactions for it to update of movability
