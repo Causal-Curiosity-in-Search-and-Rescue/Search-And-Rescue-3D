@@ -218,7 +218,7 @@ class SearchAndRescueEnv(gym.Env):
     def translate_action(self,action):
         move = 0
         turn = 0
-        speed = 10
+        speed = 2
         leftWheelVelocity = 0
         rightWheelVelocity = 0
         
