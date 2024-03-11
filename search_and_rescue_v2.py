@@ -30,6 +30,7 @@ BASE_PATH = os.path.join(os.getcwd(),"resources")
 # LOAD COMPUTERVISION MODELS
 CV_MODEL = load(f"{BASE_PATH}/models/unsup_txture_clsf_rf.joblib")
 CV_SCALER = load(f"{BASE_PATH}/models/unsup_txture_clsf_scaler.joblib")
+CV_THRESHOLD = 0.8
 SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 
 # Initialize Digital MIND
@@ -87,12 +88,18 @@ class SearchAndRescueEnv(gym.Env):
     def __init__(self):
         super(SearchAndRescueEnv, self).__init__()
         self.action_space = spaces.Discrete(3)  # Forward, Left, Right
-        self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(70+AGENT_ACTION_LEN,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(3+AGENT_ACTION_LEN,), dtype=np.float32)
         
         # Initial Params
         self.movability_dict = {0:None,1:None}
         self.visual_predictions= {}
+        self.movability_predictions = {}
         self.causal_interaction_count = 0
+        sorted_obj_ids = [0,1]
+        for objectID in sorted_obj_ids:
+            self.visual_predictions[objectID] = []
+            self.movability_predictions[objectID] = []
+        
     
     def create_walls(self,map_plan):
         # define ground
@@ -159,6 +166,8 @@ class SearchAndRescueEnv(gym.Env):
                                           halfExtents=[0.5, 0.5, 3],
                                           rgbaColor=[0, 1, 0, 1])
 
+        
+        
         for i in range(0, height):
             for j in range(0, width):
                 if map_plan[i][j] == "m":
@@ -170,6 +179,7 @@ class SearchAndRescueEnv(gym.Env):
                                       )
                     p.changeVisualShape(id_num, -1, textureUniqueId=self.MARBLED_1)
                     object_ids.append(id_num)
+                    self.movable_obj_ids.append(id_num)
 
                 if map_plan[i][j] == "i":
                     #id_num = int(str(i) + str(j))
@@ -180,6 +190,7 @@ class SearchAndRescueEnv(gym.Env):
                                       )
                     p.changeVisualShape(id_num, -1, textureUniqueId=self.MARBLED_2)
                     object_ids.append(id_num)
+                    self.immovable_obj_ids.append(id_num)
 
                 if map_plan[i][j] == "o":
                     self.goal_id = p.createMultiBody(baseMass=0,
@@ -188,7 +199,6 @@ class SearchAndRescueEnv(gym.Env):
                                       basePosition=[i, j, 3],
                                       )
 
-        print(object_ids)
         return object_ids # returns the unique id for each obstacle created
     
     def initialized_objects_position(self,objectIDs):
@@ -324,13 +334,14 @@ class SearchAndRescueEnv(gym.Env):
                 classified_image = "Cracked" if (thresholded_prediction == 1) else "Grooved"
                 print(f'[INFO] Classified Texture Class : {classified_image} - UID : {uid} - Position : {pos} -  {thresholded_prediction}')
                 
+                sorted_obj_id = self.sort_obj_ids_truth(uid)
                 #On getting close to object for inspection, get the predicted class
                 if distance<=1 and cos_angle < -0.30: # Robot is facing the object 
                     # Updated Vision Texture Classification 
-                     
+                    
                     sensing_info.append(
                         {
-                            'uid':uid,
+                            'uid':sorted_obj_id,
                             'distance': distance,
                             'cos_angle':cos_angle,
                             'is_facing_object':True,
@@ -341,7 +352,7 @@ class SearchAndRescueEnv(gym.Env):
                 else:
                     sensing_info.append(
                         {
-                            'uid':uid,
+                            'uid':sorted_obj_id,
                             'distance': distance,
                             'cos_angle':cos_angle,
                             'is_facing_object':False,
@@ -350,8 +361,15 @@ class SearchAndRescueEnv(gym.Env):
                         }
                     )
                 
-                create_or_update_object(uid,thresholded_prediction, pos[0], pos[1], pos[2],features)
+                create_or_update_object(sorted_obj_id,thresholded_prediction, pos[0], pos[1], pos[2],features)
         return sensing_info
+    
+    def sort_obj_ids_truth(self,uid):
+        if uid in self.movable_obj_ids:
+            return 1
+        # elif uid in self.immovable_obj_ids:
+        else:
+            return 0
     
     def apply_thresholding(self,uid,current_prediction):
         self.visual_predictions[uid].append(current_prediction)
@@ -360,7 +378,7 @@ class SearchAndRescueEnv(gym.Env):
         # print(f"[DEBUG] Mean of visual Predictions for {uid} then {prediction_prob}")
         if len(self.visual_predictions[uid]) > 4:
             logging.info(f"[DEBUG] Mean of visual Predictions for {uid} then {prediction_prob}")
-            if prediction_prob > 0.8:
+            if prediction_prob > CV_THRESHOLD:
                 return 1
             else:
                 return 0
@@ -471,8 +489,9 @@ class SearchAndRescueEnv(gym.Env):
         self.store_causal_probability(combined_df)
         
     def get_texture_and_movability(self,objectID):
+        sorted_obj_id = self.sort_obj_ids_truth(objectID)
         for obj_id, obj in ENV_MANAGER.objects.items():
-            if obj.id == objectID:
+            if obj.id == sorted_obj_id:
                 if obj.texture_class != None:
                     return  int(obj.texture_class), int(obj.casual_probability),obj.initial_position
                 return -1,int(obj.casual_probability),obj.initial_position
@@ -551,24 +570,21 @@ class SearchAndRescueEnv(gym.Env):
         if self.done:
             logging.info(f'[INFO] Episode Ending with Cumlative Reward : {self.cumulative_reward}') # This metric can be used to compare how well the agent performs with and without causal and digital mind
         
-        goal_delta_x = self.goal_position[0] - self.robot_position[0]
-        goal_delta_y = self.goal_position[1] - self.robot_position[1]
-        rl_info = []
-        for idx in range(len(self.objectIDs)):
-            objectID = self.objectIDs[idx]
-            texture_class,causal_movability,object_position = self.get_texture_and_movability(objectID)
-            if (object_position[0] != None) and (object_position[1] != None):
-                object_delta_x = object_position[0] - self.robot_position[0]
-                object_delta_y = object_position[1] - self.robot_position[1]
-            else:
-                object_delta_x = self.objectPositions[objectID][0] - self.robot_position[0]
-                object_delta_y = self.objectPositions[objectID][1] - self.robot_position[1]
-            rl_info.append([causal_movability,int(object_delta_x),int(object_delta_y)])
-        flattened_rl_info = [item for sublist in rl_info for item in sublist]
+        goal_delta = distance_3d(self.goal_position,self.robot_position)
+        # rl_info = []
+        # for idx in range(len(self.objectIDs)):
+        #     objectID = self.objectIDs[idx]
+        #     texture_class,causal_movability,object_position = self.get_texture_and_movability(objectID)
+        #     if (object_position[0] != None) and (object_position[1] != None):
+        #         object_delta_x = object_position[0] - self.robot_position[0]
+        #         object_delta_y = object_position[1] - self.robot_position[1]
+        #     else:
+        #         object_delta_x = self.objectPositions[objectID][0] - self.robot_position[0]
+        #         object_delta_y = self.objectPositions[objectID][1] - self.robot_position[1]
+        #     rl_info.append([causal_movability,int(object_delta_x),int(object_delta_y)])
+        # flattened_rl_info = [item for sublist in rl_info for item in sublist]
         
-        ## TODO - Scale Visit Counts from 0 -> 1
-        
-        observation = [int(self.robot_position[0]), int(self.robot_position[1]), int(goal_delta_x),int(goal_delta_y)]  + flattened_rl_info + list(self.prev_actions)
+        observation = [int(self.robot_position[0]), int(self.robot_position[1]), goal_delta]   + list(self.prev_actions) #+ flattened_rl_info
         observation = np.array(observation)
         # print('[INFO] Observation Space : ',observation)
         info = {}
@@ -642,15 +658,14 @@ class SearchAndRescueEnv(gym.Env):
         
         # Create the Walls 
         self.create_walls(map_plan)
+        self.movable_obj_ids = []
+        self.immovable_obj_ids = []
         
         # Create the Obstacles
         self.objectIDs = self.create_obstacles(map_plan)# List of unique IDs for each instance
         self.objectPositions = self.initialized_objects_position(self.objectIDs)
         self.goal_position = self.initialized_objects_position(self.goal_id)
         # Set the Goal to be the position of the 3rd Movable Object for now 
-        
-        for objectID in self.objectIDs:
-            self.visual_predictions[objectID] = []
         
         # Setup the Agent 
         self.robot_position,self.camera_position,self.robot_orientation = self.setup_agent()
@@ -660,17 +675,13 @@ class SearchAndRescueEnv(gym.Env):
         self.done = False
         self.prev_reward = 0
         self.reward = 0
-        goal_delta_x = self.goal_position[0] - self.robot_position[0]
-        goal_delta_y = self.goal_position[1] - self.robot_position[1]
+        goal_delta = distance_3d(self.goal_position,self.robot_position)
         
         # Evaluation Init
         self.current_step = 0
         self.cumulative_reward = 0
         self.goal_reached = False
         self.max_steps = 500
-        self.movability_predictions = {}
-        for objectID in self.objectIDs:
-            self.movability_predictions[objectID] = []
         
         self.prev_actions = deque(maxlen=AGENT_ACTION_LEN)
         for i in range(AGENT_ACTION_LEN):
@@ -682,20 +693,20 @@ class SearchAndRescueEnv(gym.Env):
         for obj_id, obj in ENV_MANAGER.objects.items():
             print(f"ObjectStruct(ID={obj.id},Texture Class = {obj.texture_class}, Texture={obj.texture},Current Position={obj.position}, Initial Position={obj.initial_position}, Casual Probability={obj.casual_probability}, Movability={obj.movability})")
         
-        rl_info = []
-        for idx in range(len(self.objectIDs)):
-            objectID = self.objectIDs[idx]
-            texture_class,causal_movability,object_position = self.get_texture_and_movability(objectID)
-            if (object_position[0] != None) and (object_position[1] != None):
-                object_delta_x = object_position[0] - self.robot_position[0]
-                object_delta_y = object_position[1] - self.robot_position[1]
-            else:
-                object_delta_x = self.objectPositions[objectID][0] - self.robot_position[0]
-                object_delta_y = self.objectPositions[objectID][1] - self.robot_position[1]
-            rl_info.append([causal_movability,int(object_delta_x),int(object_delta_y)])
-        flattened_rl_info = [item for sublist in rl_info for item in sublist]
+        # rl_info = []
+        # for idx in range(len(self.objectIDs)):
+        #     objectID = self.objectIDs[idx]
+        #     texture_class,causal_movability,object_position = self.get_texture_and_movability(objectID)
+        #     if (object_position[0] != None) and (object_position[1] != None):
+        #         object_delta_x = object_position[0] - self.robot_position[0]
+        #         object_delta_y = object_position[1] - self.robot_position[1]
+        #     else:
+        #         object_delta_x = self.objectPositions[objectID][0] - self.robot_position[0]
+        #         object_delta_y = self.objectPositions[objectID][1] - self.robot_position[1]
+        #     rl_info.append([causal_movability,int(object_delta_x),int(object_delta_y)])
+        # flattened_rl_info = [item for sublist in rl_info for item in sublist]
         
-        observation = [int(self.robot_position[0]), int(self.robot_position[1]), int(goal_delta_x),int(goal_delta_y)]  + flattened_rl_info + list(self.prev_actions)
+        observation = [int(self.robot_position[0]), int(self.robot_position[1]), goal_delta]  + list(self.prev_actions) #+ flattened_rl_info
         observation = np.array(observation)
         return observation
 
