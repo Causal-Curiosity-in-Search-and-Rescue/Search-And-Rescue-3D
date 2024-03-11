@@ -42,8 +42,8 @@ p.connect(p.GUI)
 
 height = 20
 width = 20
-num_m = 10 # Movable
-num_i = 10 # Immovable
+num_m = 2 # Movable
+num_i = 2 # Immovable
 num_s = 1 # Start Positions
 MAP1 = [
     ['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w'],
@@ -164,7 +164,8 @@ class SearchAndRescueEnv(gym.Env):
         goalIdVisual = p.createVisualShape(p.GEOM_BOX,
                                           halfExtents=[0.5, 0.5, 3],
                                           rgbaColor=[0, 1, 0, 1])
-
+        goalIDCollision = p.createCollisionShape(p.GEOM_BOX,
+                                        halfExtents=[0.5, 0.5, 0.5])
         
         
         for i in range(0, height):
@@ -192,9 +193,10 @@ class SearchAndRescueEnv(gym.Env):
                     self.immovable_obj_ids.append(id_num)
 
                 if map_plan[i][j] == "o":
+                    
                     self.goal_id = p.createMultiBody(baseMass=0,
                                       baseVisualShapeIndex=goalIdVisual,
-                                      #baseCollisionShapeIndex=goalIdCollision,
+                                      baseCollisionShapeIndex=goalIDCollision,
                                       basePosition=[i, j, 3],
                                       )
 
