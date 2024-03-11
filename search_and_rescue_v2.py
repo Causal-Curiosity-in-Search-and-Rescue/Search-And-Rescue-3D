@@ -411,12 +411,14 @@ class SearchAndRescueEnv(gym.Env):
                         for obj_id, obj in ENV_MANAGER.objects.items():
                             if obj.id == info['uid']:
                                 if obj.movability == None:
+                                    self.movability_predictions[info['uid']].append(1)
                                     obj.movability = self.control_movability_update(info['uid'])
                                 
                     if info['object_position_has_changed']:
                         for obj_id, obj in ENV_MANAGER.objects.items():
                             if obj.id == info['uid']:
                                 if obj.movability == None:
+                                    self.movability_predictions[info['uid']].append(1)
                                     obj.movability = self.control_movability_update(info['uid'])
         
     def store_causal_probability(self,df):
