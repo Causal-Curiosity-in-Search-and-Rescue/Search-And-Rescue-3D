@@ -413,22 +413,22 @@ class SearchAndRescueEnv(gym.Env):
     def update_moability_in_digital_mind_using_last_action(self,sensing_info):
         for idx in range(len(sensing_info)):
             info = sensing_info[idx]
-            if self.last_action == 0: # last action was forward
-                if info['is_facing_object']:
-                    pdb.set_trace()
-                    if not info['object_position_has_changed']:
-                        for obj_id, obj in ENV_MANAGER.objects.items():
-                            if obj.id == info['uid']:
-                                if obj.movability == None:
-                                    self.movability_predictions[info['uid']].append(0)
-                                    obj.movability = self.control_movability_update(info['uid'])
-                                
-                    if info['object_position_has_changed']:
-                        for obj_id, obj in ENV_MANAGER.objects.items():
-                            if obj.id == info['uid']:
-                                if obj.movability == None:
-                                    self.movability_predictions[info['uid']].append(1)
-                                    obj.movability = self.control_movability_update(info['uid'])
+            # if self.last_action == 0: # last action was forward
+            if info['is_facing_object']:
+                pdb.set_trace()
+                if not info['object_position_has_changed']:
+                    for obj_id, obj in ENV_MANAGER.objects.items():
+                        if obj.id == info['uid']:
+                            if obj.movability == None:
+                                self.movability_predictions[info['uid']].append(0)
+                                obj.movability = self.control_movability_update(info['uid'])
+                            
+                if info['object_position_has_changed']:
+                    for obj_id, obj in ENV_MANAGER.objects.items():
+                        if obj.id == info['uid']:
+                            if obj.movability == None:
+                                self.movability_predictions[info['uid']].append(1)
+                                obj.movability = self.control_movability_update(info['uid'])
         
     def store_causal_probability(self,df):
         texture_0_movability = df[df['Texture'] == 0]['Movability_1'].iloc[0]
