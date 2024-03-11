@@ -330,11 +330,11 @@ class SearchAndRescueEnv(gym.Env):
                     current_visual_prediction = 1
                 else:
                     current_visual_prediction = 0
-                thresholded_prediction = self.apply_thresholding(uid,current_visual_prediction)
+                sorted_obj_id = self.sort_obj_ids_truth(uid)
+                thresholded_prediction = self.apply_thresholding(sorted_obj_id,current_visual_prediction)
                 classified_image = "Cracked" if (thresholded_prediction == 1) else "Grooved"
                 print(f'[INFO] Classified Texture Class : {classified_image} - UID : {uid} - Position : {pos} -  {thresholded_prediction}')
                 
-                sorted_obj_id = self.sort_obj_ids_truth(uid)
                 #On getting close to object for inspection, get the predicted class
                 if distance<=1 and cos_angle < -0.30: # Robot is facing the object 
                     # Updated Vision Texture Classification 
