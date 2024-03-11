@@ -417,7 +417,6 @@ class SearchAndRescueEnv(gym.Env):
             info = sensing_info[idx]
             # if self.last_action == 0: # last action was forward
             if info['is_facing_object']:
-                pdb.set_trace()
                 if not info['object_position_has_changed']:
                     for obj_id, obj in ENV_MANAGER.objects.items():
                         if obj.id == info['uid']:
