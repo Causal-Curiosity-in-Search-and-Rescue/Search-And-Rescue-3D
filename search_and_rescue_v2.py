@@ -388,9 +388,9 @@ class SearchAndRescueEnv(gym.Env):
     
     def check_if_object_position_has_changed(self): # Relative to seeing if object has moved as a result of robot moving against the object its facing and comparing previous positions
         if (((self.previous_position[0]-0.01) < self.robot_position[0] < (self.previous_position[0]+0.01)) and ((self.previous_position[1]-0.01) < self.robot_position[1] < (self.previous_position[1]+0.01))):
-            return False
-        else:
             return True
+        else:
+            return False
     
     def control_movability_update(self,uid):
         if len(self.movability_predictions[uid]) > 4: # number of minimum interactions for it to update of movability
@@ -407,11 +407,12 @@ class SearchAndRescueEnv(gym.Env):
             info = sensing_info[idx]
             if self.last_action == 0: # last action was forward
                 if info['is_facing_object']:
+                    pdb.set_trace()
                     if not info['object_position_has_changed']:
                         for obj_id, obj in ENV_MANAGER.objects.items():
                             if obj.id == info['uid']:
                                 if obj.movability == None:
-                                    self.movability_predictions[info['uid']].append(1)
+                                    self.movability_predictions[info['uid']].append(0)
                                     obj.movability = self.control_movability_update(info['uid'])
                                 
                     if info['object_position_has_changed']:
@@ -545,6 +546,11 @@ class SearchAndRescueEnv(gym.Env):
 
         # Update the positions
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
+        
+        # Check objects vicinity and Then translate actions
+        sensing_info = self.start_sensing_module_and_initializing_digital_mind()
+        self.update_moability_in_digital_mind_using_last_action(sensing_info)
+        self.casual_reasoning_for_object_movability()
         
         collision_info = self.check_collision_with_walls()
         if collision_info['has_collided']:
