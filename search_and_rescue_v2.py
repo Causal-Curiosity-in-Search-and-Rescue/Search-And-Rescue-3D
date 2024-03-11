@@ -93,12 +93,10 @@ class SearchAndRescueEnv(gym.Env):
         
         # Initial Params
         self.movability_dict = {0:None,1:None}
-        self.visual_predictions= {}
         self.movability_predictions = {}
         self.causal_interaction_count = 0
         sorted_obj_ids = [0,1]
         for objectID in sorted_obj_ids:
-            self.visual_predictions[objectID] = []
             self.movability_predictions[objectID] = []
         
     
@@ -693,6 +691,10 @@ class SearchAndRescueEnv(gym.Env):
         self.prev_reward = 0
         self.reward = 0
         goal_delta = distance_3d(self.goal_position,self.robot_position)
+        self.visual_predictions= {}
+        sorted_obj_ids = [0,1]
+        for objectID in sorted_obj_ids:
+            self.visual_predictions[objectID] = []
         
         # Evaluation Init
         self.current_step = 0
