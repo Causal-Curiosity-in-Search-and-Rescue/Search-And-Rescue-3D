@@ -393,14 +393,14 @@ class SearchAndRescueEnv(gym.Env):
             return True
         
     def has_object_moved(self, uid, movement_threshold=0.05):
-        pdb.set_trace()
         new_position,_ = p.getBasePositionAndOrientation(uid)
         initial_position = self.objectPositions[uid]
         # Calculate the distance moved
         distance_moved = np.linalg.norm(np.array(initial_position) - np.array(new_position))
-
+        truth_array_moved = distance_moved > movement_threshold
+        truth_moved = np.mean(truth_array_moved) > 0.5
         # Check if the distance moved is greater than the threshold
-        return distance_moved > movement_threshold
+        return truth_moved
     
     def control_movability_update(self,uid):
         if len(self.movability_predictions[uid]) > 4: # number of minimum interactions for it to update of movability
