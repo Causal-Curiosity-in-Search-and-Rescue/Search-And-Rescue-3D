@@ -390,8 +390,9 @@ class SearchAndRescueEnv(gym.Env):
         else:
             return True
         
-    def has_object_moved(self, uid, new_position, movement_threshold=0.05):
+    def has_object_moved(self, uid, movement_threshold=0.05):
         pdb.set_trace()
+        new_position,_ = p.getBasePositionAndOrientation(uid)
         initial_position = self.objectPositions[uid]
         # Calculate the distance moved
         distance_moved = np.linalg.norm(np.array(initial_position) - np.array(new_position))
