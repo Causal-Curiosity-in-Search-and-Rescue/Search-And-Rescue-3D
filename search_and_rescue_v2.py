@@ -615,7 +615,7 @@ class SearchAndRescueEnv(gym.Env):
         scaled_deltas = {
             'walls': {},
             'goal': None
-            # 'objects': {}
+            'objects': {}
         }
 
         # Calculate scaled deltas for walls
