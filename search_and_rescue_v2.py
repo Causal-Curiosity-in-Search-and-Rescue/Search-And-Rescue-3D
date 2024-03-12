@@ -614,7 +614,7 @@ class SearchAndRescueEnv(gym.Env):
         # Initialize dictionary to store scaled deltas
         scaled_deltas = {
             'walls': {},
-            'goal': None
+            'goal': None,
             'objects': {}
         }
 
