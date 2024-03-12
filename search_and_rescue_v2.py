@@ -392,7 +392,7 @@ class SearchAndRescueEnv(gym.Env):
                             'distance': distance,
                             'cos_angle':cos_angle,
                             'is_facing_object':False,
-                            'object_position_has_changed':False,
+                            'object_position_has_changed':None,
                             'current_visual_prediction':thresholded_prediction
                         }
                     )
@@ -452,7 +452,7 @@ class SearchAndRescueEnv(gym.Env):
             info = sensing_info[idx]
             # if self.last_action == 0: # last action was forward
             if info['is_facing_object']:
-                if not info['object_position_has_changed']:
+                if info['object_position_has_changed'] == False:
                     for obj_id, obj in ENV_MANAGER.objects.items():
                         if obj.id == info['uid']:
                             if obj.movability == None:
