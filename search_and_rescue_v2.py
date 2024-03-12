@@ -381,7 +381,7 @@ class SearchAndRescueEnv(gym.Env):
                             'distance': distance,
                             'cos_angle':cos_angle,
                             'is_facing_object':True,
-                            'object_position_has_changed':self.check_if_object_position_has_changed(),
+                            'object_position_has_changed':self.has_object_moved_due_to_robot(uid),
                             'current_visual_prediction':thresholded_prediction
                         }
                     )
@@ -436,6 +436,42 @@ class SearchAndRescueEnv(gym.Env):
         truth_moved = np.mean(truth_array_moved) > 0.5
         # Check if the distance moved is greater than the threshold
         return truth_moved
+    
+    def has_object_moved_due_to_robot(self, uid, movement_threshold=0.05):
+        # Get the new position of the object and the robot
+        new_object_position, _ = p.getBasePositionAndOrientation(uid)
+        new_robot_position = self.robot_position  # Assuming this is updated elsewhere before this method is called
+
+        # Retrieve the initial positions from your records
+        initial_object_position = self.objectPositions[uid]
+        initial_robot_position = self.previous_position
+
+        # Calculate the displacement distances
+        object_displacement = np.linalg.norm(np.array(initial_object_position) - np.array(new_object_position))
+        robot_displacement = np.linalg.norm(np.array(initial_robot_position) - np.array(new_robot_position))
+
+        # Determine if the object has moved significantly (more than the threshold)
+        object_moved_significantly = object_displacement > movement_threshold
+
+        # Now, check if the robot's displacement is aligned with the object's displacement
+        # You could use vector comparison or simply check if both moved noticeably
+        aligned_movement = False
+        if object_moved_significantly and robot_displacement > movement_threshold:
+            # Calculate vectors to see if they are in the same direction; this is a simplified example
+            object_movement_vector = np.array(new_object_position) - np.array(initial_object_position)
+            robot_movement_vector = np.array(new_robot_position) - np.array(initial_robot_position)
+            
+            # Normalize vectors and calculate dot product to check alignment
+            norm_obj_vector = object_movement_vector / np.linalg.norm(object_movement_vector)
+            norm_robot_vector = robot_movement_vector / np.linalg.norm(robot_movement_vector)
+            dot_product = np.dot(norm_obj_vector, norm_robot_vector)
+
+            # Check if the movement direction is similar (dot product close to 1)
+            if dot_product > 0.5:  # Adjust this value based on how strict you want this check to be
+                aligned_movement = True
+
+        # The object is considered moved due to the robot if it moved significantly and in alignment with the robot's movement
+        return object_moved_significantly and aligned_movement
     
     def control_movability_update(self,uid):
         if len(self.movability_predictions[uid]) > 4: # number of minimum interactions for it to update of movability
