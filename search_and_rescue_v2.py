@@ -627,10 +627,10 @@ class SearchAndRescueEnv(gym.Env):
         goal_delta = [((self.goal_position[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
         scaled_deltas['goal'] = goal_delta
 
-        # # Calculate scaled deltas for objects - use UID of the objects it has seen TODO
-        # for object_id, object_position in self.objectPositions.items():  # Assuming this is how you store object positions
-        #     delta = [((object_position[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
-        #     scaled_deltas['objects'][object_id] = delta
+        # Calculate scaled deltas for objects - use UID of the objects it has seen TODO
+        for object_id, object_position in self.objectPositions.items():  # Assuming this is how you store object positions
+            delta = [((object_position[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
+            scaled_deltas['objects'][object_id] = delta
 
         return scaled_deltas        
 
@@ -700,9 +700,9 @@ class SearchAndRescueEnv(gym.Env):
         # Flatten scaled_deltas and add them to your observation
         wall_deltas = [delta for deltas in scaled_deltas['walls'].values() for delta in deltas]  # Flatten wall deltas
         goal_delta = scaled_deltas['goal']
-        # object_deltas = [delta for deltas in scaled_deltas['objects'].values() for delta in deltas]  # Flatten object deltas
+        object_deltas = [delta for deltas in scaled_deltas['objects'].values() for delta in deltas]  # Flatten object deltas
 
-        observation = goal_delta + wall_deltas + list(self.prev_actions) #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
+        observation = goal_delta + wall_deltas + object_deltas + list(self.prev_actions) #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
         observation = np.array(observation)
         info = {}
         self.dump_digital_mind_to_json()
@@ -824,8 +824,9 @@ class SearchAndRescueEnv(gym.Env):
         # Flatten scaled_deltas and add them to your observation
         wall_deltas = [delta for deltas in scaled_deltas['walls'].values() for delta in deltas]  # Flatten wall deltas
         goal_delta = scaled_deltas['goal']
-    
-        observation = goal_delta + wall_deltas + list(self.prev_actions) #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
+        object_deltas = [delta for deltas in scaled_deltas['objects'].values() for delta in deltas]  # Flatten object deltas
+
+        observation = goal_delta + wall_deltas + object_deltas + list(self.prev_actions) #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
         observation = np.array(observation)
         return observation
 
