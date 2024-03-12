@@ -30,7 +30,8 @@ BASE_PATH = os.path.join(os.getcwd(),"resources")
 # LOAD COMPUTERVISION MODELS
 CV_MODEL = load(f"{BASE_PATH}/models/unsup_txture_clsf_rf.joblib")
 CV_SCALER = load(f"{BASE_PATH}/models/unsup_txture_clsf_scaler.joblib")
-CV_THRESHOLD = 0.8
+CV_THRESHOLD = 0.7
+MOVABILITY_THRESHOLD = 0.7
 SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 
 # Initialize Digital MIND
@@ -476,7 +477,7 @@ class SearchAndRescueEnv(gym.Env):
     def control_movability_update(self,uid):
         if len(self.movability_predictions[uid]) > 4: # number of minimum interactions for it to update of movability
             movability_prob =  np.mean(self.movability_predictions[uid])
-            if movability_prob > 0.8:
+            if movability_prob > MOVABILITY_THRESHOLD:
                 return 1
             else:
                 return 0
@@ -515,6 +516,7 @@ class SearchAndRescueEnv(gym.Env):
         texture = np.array([0,1])
         movability = np.array([1, 1])
         for obj_id, obj in ENV_MANAGER.objects.items():
+            
             if obj.movability == None:
                 movability = np.array([1, 1])# it will set everything to be movable on the truth table
             else:
