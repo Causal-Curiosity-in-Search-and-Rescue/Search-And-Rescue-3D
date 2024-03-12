@@ -69,7 +69,6 @@ num_s = 1 # Start Positions
 #     ['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w']
 # ]
 
-map_plan = generate_maze_with_objects(height, width, num_m, num_i, num_s) # To Remove Randomization of env . let robot position be random
 
 def create_or_update_object(detected_object_id,texture_class,detected_x,detected_y,detected_z,detected_texture):
     attributes = {
@@ -772,6 +771,7 @@ class SearchAndRescueEnv(gym.Env):
         self.boxHalfHeight = 3
         self.distance = 100000
         self.last_action = 4 # its in stop action
+        map_plan = generate_maze_with_objects(height, width, num_m, num_i, num_s) # To Remove Randomization of env . let robot position be random
         
         # Create the Walls 
         self.create_walls(map_plan)
