@@ -659,14 +659,14 @@ class SearchAndRescueEnv(gym.Env):
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         
         # Update the visitation grid
-        grid_position = self.discretize_position(self.robot_position)
-        self.visitation_grid[grid_position] += 1
+        # grid_position = self.discretize_position(self.robot_position)
+        # self.visitation_grid[grid_position] += 1
         
-        # Apply a penalty for revisiting the same cell
-        visit_count = self.visitation_grid[grid_position]
-        visit_penalty = max(visit_count - 1, 0)  # No penalty for the first visit
-        penalty_factor = 0.01  
-        self.reward -= visit_penalty * penalty_factor
+        # # Apply a penalty for revisiting the same cell
+        # visit_count = self.visitation_grid[grid_position]
+        # visit_penalty = max(visit_count - 1, 0)  # No penalty for the first visit
+        # penalty_factor = 0.01  
+        # self.reward -= visit_penalty * penalty_factor
         
         collision_info = self.check_collision_with_walls()
         if collision_info['has_collided']:
@@ -797,7 +797,7 @@ class SearchAndRescueEnv(gym.Env):
         sorted_obj_ids = [0,1]
         for objectID in sorted_obj_ids:
             self.visual_predictions[objectID] = []
-        self.visitation_grid = np.zeros((height,width), dtype=int) 
+        # self.visitation_grid = np.zeros((height,width), dtype=int) 
         
         # Evaluation Init
         self.current_step = 0
