@@ -381,7 +381,7 @@ class SearchAndRescueEnv(gym.Env):
                             'distance': distance,
                             'cos_angle':cos_angle,
                             'is_facing_object':True,
-                            'object_position_has_changed':self.has_object_moved(uid,pos),
+                            'object_position_has_changed':self.check_if_object_position_has_changed(),
                             'current_visual_prediction':thresholded_prediction
                         }
                     )
@@ -552,31 +552,13 @@ class SearchAndRescueEnv(gym.Env):
 
         for contact in contact_points:
             # Check if the contact involves the robot and any of the walls
-            if contact[2] in self.wall_ids:  # contact[2] is the unique ID of the second object in the collision
+            if contact[2] in self.wall_ids or contact[2] in self.room_ids:  # contact[2] is the unique ID of the second object in the collision
                 collision_info['has_collided'] = True
                 collision_info['collided_wall'] = contact[2]  # Store the ID of the wall
                 break  # No need to check further if a collision is found
 
         return collision_info
     
-    def calculate_wall_delta(self):
-        collision_info = {
-            'has_collided': False,
-            'collided_wall': None
-        }
-
-        # Retrieve all contact points
-        contact_points = p.getContactPoints(bodyA=self.TURTLE)
-
-        for contact in contact_points:
-            # Check if the contact involves the robot and any of the walls
-            if contact[2] in self.wall_ids:  # contact[2] is the unique ID of the second object in the collision
-                collision_info['has_collided'] = True
-                collision_info['collided_wall'] = contact[2]  # Store the ID of the wall
-                break  # No need to check further if a collision is found
-
-        return collision_info
-
     def check_collision_with_goal_and_update_state(self,agent_position):
         collision_info = {
             'reached_goal': False
@@ -644,13 +626,13 @@ class SearchAndRescueEnv(gym.Env):
         # Apply a penalty for revisiting the same cell
         visit_count = self.visitation_grid[grid_position]
         visit_penalty = max(visit_count - 1, 0)  # No penalty for the first visit
-        penalty_factor = 0.1  
+        penalty_factor = 0.01  
         self.reward -= visit_penalty * penalty_factor
         
         collision_info = self.check_collision_with_walls()
         if collision_info['has_collided']:
             logging.info('[INFO] Has Colided With Wall ')
-            self.reward -= 10
+            self.reward -= 1
             self.done = True  
         
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
