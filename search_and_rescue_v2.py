@@ -776,7 +776,7 @@ class SearchAndRescueEnv(gym.Env):
         sorted_obj_ids = [0,1]
         for objectID in sorted_obj_ids:
             self.visual_predictions[objectID] = []
-        self.visitation_grid = np.zeros((height,width), dtype=np.int) 
+        self.visitation_grid = np.zeros((height,width), dtype=int) 
         
         # Evaluation Init
         self.current_step = 0
