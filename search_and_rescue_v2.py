@@ -749,6 +749,7 @@ class SearchAndRescueEnv(gym.Env):
         p.setGravity(0, 0, -10)
         p.resetDebugVisualizerCamera(cameraDistance=20, cameraYaw=-90, cameraPitch=-91,
                                             cameraTargetPosition=[9, 9, 0])
+        map_plan = generate_maze_with_objects(height, width, num_m, num_i, num_s) # To Remove Randomization of env . let robot position be random
         
         # enable real time simulation
         p.setRealTimeSimulation(1)
@@ -771,7 +772,6 @@ class SearchAndRescueEnv(gym.Env):
         self.boxHalfHeight = 3
         self.distance = 100000
         self.last_action = 4 # its in stop action
-        map_plan = generate_maze_with_objects(height, width, num_m, num_i, num_s) # To Remove Randomization of env . let robot position be random
         
         # Create the Walls 
         self.create_walls(map_plan)
