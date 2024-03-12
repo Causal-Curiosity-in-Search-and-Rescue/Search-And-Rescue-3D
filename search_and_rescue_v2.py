@@ -153,7 +153,7 @@ class SearchAndRescueEnv(gym.Env):
 
         self.environment_midpoint = (height / 2, width / 2, 1)
         
-        self.scaling_factor = self.calculate_full_length_scaling() # Will Experiment with global or local
+        self.scaling_factor = self.calculate_half_length_scaling() # Will Experiment with global or local
         
     def calculate_half_length_scaling(self):
         """
