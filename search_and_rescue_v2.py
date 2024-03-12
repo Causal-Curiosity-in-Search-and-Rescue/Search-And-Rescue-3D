@@ -525,7 +525,7 @@ class SearchAndRescueEnv(gym.Env):
         bn = bn.fit_cpds(df, method="BayesianEstimator", bayes_prior="K2")
         # Predicting the probabilities
         predictions = bn.predict_probability(df, 'Movability')
-        logging.info(f'Causal Probability Predicted : {predictions['Movability']}')
+        logging.info(f"Causal Probability Predicted : {predictions['Movability']}")
         
         binary_predictions = predictions['Movability_1'] > 0.5  # Adjust based on actual column names in predictions
         
