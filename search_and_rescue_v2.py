@@ -207,12 +207,12 @@ class SearchAndRescueEnv(gym.Env):
             for j in range(0, width):
                 if map_plan[i][j] == "m":
                     #id_num = int(str(i) + str(j))
-                    id_num = p.createMultiBody(baseMass=5,
+                    id_num = p.createMultiBody(baseMass=1,
                                       baseVisualShapeIndex=boxIdVisual,
                                       baseCollisionShapeIndex=boxIdCollision,
                                       basePosition=[i, j, 0.5],
                                       )
-                    p.changeVisualShape(id_num, -1, textureUniqueId=self.MARBLED_1)
+                    p.changeVisualShape(id_num, -1, textureUniqueId=self.CRACKED_1)
                     object_ids.append(id_num)
                     self.movable_obj_ids.append(id_num)
 
