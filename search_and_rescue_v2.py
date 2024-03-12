@@ -468,6 +468,7 @@ class SearchAndRescueEnv(gym.Env):
             dot_product = np.dot(norm_obj_vector, norm_robot_vector)
 
             # Check if the movement direction is similar (dot product close to 1)
+            pdb.set_trace()
             if dot_product > 0.5:  # Adjust this value based on how strict you want this check to be
                 aligned_movement = True
 
