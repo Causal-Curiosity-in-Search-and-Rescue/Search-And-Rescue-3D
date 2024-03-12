@@ -27,8 +27,10 @@ def quaternion_to_forward_vector(quaternion):
     fz = 1 - 2 * (x*x + y*y)
     return np.array([fx, fy, fz])
 
-def generate_maze_with_objects(height, width, num_m, num_i,num_s,maze1):
+def generate_maze_with_objects( height, width, num_m, num_i,num_s):
+    maze1 = generate_maze(height,width)
     maze = copy.deepcopy(maze1)
+ 
     # Generate random positions for 'm'
     for _ in range(num_m):
         while True:
@@ -37,7 +39,7 @@ def generate_maze_with_objects(height, width, num_m, num_i,num_s,maze1):
             if maze[row][col] == 'c':
                 maze[row][col] = 'm'
                 break
-
+ 
     # Generate random positions for 'i'
     for _ in range(num_i):
         while True:
@@ -54,7 +56,7 @@ def generate_maze_with_objects(height, width, num_m, num_i,num_s,maze1):
             if maze[row][col] == 'c':
                 maze[row][col] = 's'
                 break
-
+ 
     return maze
 
 def visualisemaze(maze):
@@ -73,3 +75,44 @@ def visualisemaze(maze):
     plt.axis('off')
     # plt.show(block=False)
     plt.savefig('2d_test_env.png')
+    
+def generate_maze(height, width):
+    maze = [['w' if i == 0 or i == height - 1 or j == 0 or j == width - 1 else 'c' for j in range(width)] for i in range(height)]
+    maze_with_array = place_array_in_middle(maze)
+    maze_with_u = place_u_near_walls(maze_with_array)
+    return maze_with_u
+ 
+def place_array_in_middle(maze):
+    middle_row = len(maze) // 2
+    middle_col = len(maze[0]) // 2
+ 
+    array_to_place = [
+        ['u','u', 'u', 'u', 'u', 'u', 'u','u'],
+        ['u','u', 'r', 'r', 'r', 'r', 'r','u'],
+        ['u','u', 'r', 'c', 'o', 'c', 'r','u'],
+        ['u','m', 'c', 'c', 'c', 'c', 'r','u'],
+        ['u','u', 'r', 'c', 'c', 'c', 'r','u'],
+        ['u','u', 'r', 'r', 'r', 'r', 'r','u'],
+        ['u','u', 'u', 'u', 'u', 'u', 'u','u']
+    ]
+ 
+    for i in range(len(array_to_place)):
+        for j in range(len(array_to_place[0])):
+            maze[middle_row - 2 + i][middle_col - 3 + j] = array_to_place[i][j]
+ 
+    return maze
+ 
+ 
+def place_u_near_walls(maze):
+    height = len(maze)
+    width = len(maze[0])
+ 
+    for i in range(1, height - 1):
+        for j in range(1, width - 1):
+            if maze[i][j] == 'c':
+                adjacent_cells = [(i-1, j), (i+1, j), (i, j-1), (i, j+1)]
+                for x, y in adjacent_cells:
+                    if maze[x][y] == 'w':
+                        maze[i][j] = 'u'
+ 
+    return maze

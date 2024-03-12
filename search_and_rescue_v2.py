@@ -45,33 +45,30 @@ width = 20
 num_m = 2 # Movable
 num_i = 2 # Immovable
 num_s = 1 # Start Positions
-MAP1 = [
-    ['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'w', 'w', 'w', 'w', 'w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'w', 'c', 'o', 'c', 'w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'm', 'c', 'c', 'c', 'c', 'w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'w', 'c', 'c', 'c', 'w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'w', 'w', 'w', 'w', 'w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'i', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-    ['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w']
-]
+# MAP1 = [
+#     ['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'r', 'r', 'r', 'r', 'r', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'r', 'c', 'o', 'c', 'r', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'm', 'c', 'c', 'c', 'c', 'r', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'r', 'c', 'c', 'c', 'r', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'r', 'r', 'r', 'r', 'r', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'i', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
+#     ['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w']
+# ]
 
-map_plan = generate_maze_with_objects(height, width, num_m, num_i, num_s,MAP1) # To Remove Randomization of env . let robot position be random
-
-# map_plan = generate_maze_with_objects(height, width, num_m, num_i,num_s)
-#visualisemaze(map_plan)
+map_plan = generate_maze_with_objects(height, width, num_m, num_i, num_s) # To Remove Randomization of env . let robot position be random
 
 def create_or_update_object(detected_object_id,texture_class,detected_x,detected_y,detected_z,detected_texture):
     attributes = {
@@ -119,6 +116,7 @@ class SearchAndRescueEnv(gym.Env):
                                   )
 
         self.wall_ids = []  # Store wall IDs in an attribute for later access
+        self.room_ids = []  # Store Room IDS
         # define walls
         boxHalfLength = 0.5
         boxHalfWidth = 0.5
@@ -140,7 +138,44 @@ class SearchAndRescueEnv(gym.Env):
                                       basePosition=[i, j, 1],
                                       )
                     self.wall_ids.append(wall_id)
+                if map_plan[i][j] == "r":
+                    room_id = p.createMultiBody(baseMass=0,
+                                      baseVisualShapeIndex=wallsIdVisual,
+                                      baseCollisionShapeIndex=wallsIdCollision,
+                                      basePosition=[i, j, 1],
+                                      )
+                    self.room_ids.append(room_id)
+                    
+        # Get Midpoint of the Walls for each direction and the midpoint of the environment
+        self.wall_midpoints = {'north': (height / 2, width - 1, 1), 'south': (height / 2, 0, 1), 
+                            'east': (height - 1, width / 2, 1), 'west': (0, width / 2, 1)}
+
+        self.environment_midpoint = (height / 2, width / 2, 1)
         
+        self.scaling_factor = self.calculate_full_length_scaling() # Will Experiment with global or local
+        
+    def calculate_half_length_scaling(self):
+        """
+        Half Length Scaling Factor can be good for Local Exploration
+        """
+        wall_midpoint = self.wall_midpoints['north'] # can use any wall
+        env_midpoint = self.environment_midpoint
+        half_length = ((wall_midpoint[0] - env_midpoint[0]) ** 2 + 
+                       (wall_midpoint[1] - env_midpoint[1]) ** 2 + 
+                       (wall_midpoint[2] - env_midpoint[2]) ** 2) ** 0.5
+        return half_length
+
+    def calculate_full_length_scaling(self):
+        """
+        Full Length Scaling Factor can be good for a Global Perspective of the Env.
+        """
+        north_midpoint = self.wall_midpoints['north']
+        south_midpoint = self.wall_midpoints['south']
+        full_length = ((north_midpoint[0] - south_midpoint[0]) ** 2 + 
+                       (north_midpoint[1] - south_midpoint[1]) ** 2 + 
+                       (north_midpoint[2] - south_midpoint[2]) ** 2) ** 0.5
+        return full_length
+    
     def create_obstacles(self,map_plan):
         # define movableobjects
         object_ids = []
@@ -443,7 +478,6 @@ class SearchAndRescueEnv(gym.Env):
     def casual_reasoning_for_object_movability(self): # to be called and used in step
         texture = np.array([0,1])
         movability = np.array([1, 1])
-        # if distance<=1 and cos_angle < -0.30: # Robot is facing the object 
         for obj_id, obj in ENV_MANAGER.objects.items():
             if obj.movability == None:
                 movability = np.array([1, 1])# it will set everything to be movable on the truth table
@@ -456,8 +490,6 @@ class SearchAndRescueEnv(gym.Env):
                             self.movability_dict[0] = int(obj.movability)
                         else:
                             self.movability_dict[0] = None
-                    # else:
-                    #     movability_dict[0] = 1
 
                 if self.movability_dict[1] == None:
                     if obj.texture_class == 1:
@@ -467,8 +499,7 @@ class SearchAndRescueEnv(gym.Env):
                             self.movability_dict[1] = int(obj.movability)
                         else:
                             self.movability_dict[1] = None
-                    # else:
-                    #     movability_dict[1] = 1
+                   
                 logging.info(f'Movability Dictionary: {self.movability_dict}')                
                 
                 if (self.movability_dict[0] != None) and (self.movability_dict[1] != None):
@@ -476,8 +507,7 @@ class SearchAndRescueEnv(gym.Env):
                     movability = np.array([self.movability_dict[0],self.movability_dict[1]])
                 else:
                     movability = np.array([1, 1])# it will set everything to be movable on the truth table
-        # else:
-        #     movability = np.array([1, 1])# it will set everything to be movable on the truth table
+        
         n = 100
         aug_texture = np.tile(texture,n)
         aug_movability = np.tile(movability,n)
@@ -495,6 +525,7 @@ class SearchAndRescueEnv(gym.Env):
         bn = bn.fit_cpds(df, method="BayesianEstimator", bayes_prior="K2")
         # Predicting the probabilities
         predictions = bn.predict_probability(df, 'Movability')
+        logging.info(f'Causal Probability Predicted : {predictions['Movability']}')
         
         binary_predictions = predictions['Movability_1'] > 0.5  # Adjust based on actual column names in predictions
         
@@ -527,6 +558,24 @@ class SearchAndRescueEnv(gym.Env):
                 break  # No need to check further if a collision is found
 
         return collision_info
+    
+    def calculate_wall_delta(self):
+        collision_info = {
+            'has_collided': False,
+            'collided_wall': None
+        }
+
+        # Retrieve all contact points
+        contact_points = p.getContactPoints(bodyA=self.TURTLE)
+
+        for contact in contact_points:
+            # Check if the contact involves the robot and any of the walls
+            if contact[2] in self.wall_ids:  # contact[2] is the unique ID of the second object in the collision
+                collision_info['has_collided'] = True
+                collision_info['collided_wall'] = contact[2]  # Store the ID of the wall
+                break  # No need to check further if a collision is found
+
+        return collision_info
 
     def check_collision_with_goal_and_update_state(self,agent_position):
         collision_info = {
@@ -538,7 +587,31 @@ class SearchAndRescueEnv(gym.Env):
             if contact[2] in [self.goal_id]: 
                 collision_info['reached_goal']=True
         
-        return collision_info           
+        return collision_info   
+    
+    def calculate_scaled_deltas(self, agent_position):
+        # Initialize dictionary to store scaled deltas
+        scaled_deltas = {
+            'walls': {},
+            'goal': None
+            # 'objects': {}
+        }
+
+        # Calculate scaled deltas for walls
+        for wall_id, wall_midpoint in self.wall_midpoints.items():
+            delta = [((wall_midpoint[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
+            scaled_deltas['walls'][wall_id] = delta
+
+        # Calculate scaled delta for goal
+        goal_delta = [((self.goal_position[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
+        scaled_deltas['goal'] = goal_delta
+
+        # # Calculate scaled deltas for objects - use UID of the objects it has seen TODO
+        # for object_id, object_position in self.objectPositions.items():  # Assuming this is how you store object positions
+        #     delta = [((object_position[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
+        #     scaled_deltas['objects'][object_id] = delta
+
+        return scaled_deltas        
 
     def step(self, action):
         self.prev_actions.append(action)
@@ -561,9 +634,22 @@ class SearchAndRescueEnv(gym.Env):
         self.update_moability_in_digital_mind_using_last_action(sensing_info)
         self.casual_reasoning_for_object_movability()
         
+        # Update the positions
+        self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
+        
+        # Update the visitation grid
+        grid_position = self.discretize_position(self.robot_position)
+        self.visitation_grid[grid_position] += 1
+        
+        # Apply a penalty for revisiting the same cell
+        visit_count = self.visitation_grid[grid_position]
+        visit_penalty = max(visit_count - 1, 0)  # No penalty for the first visit
+        penalty_factor = 0.1  
+        self.reward -= visit_penalty * penalty_factor
+        
         collision_info = self.check_collision_with_walls()
         if collision_info['has_collided']:
-            logging.info('[INFO] Has Colided With Wall')
+            logging.info('[INFO] Has Colided With Wall ')
             self.reward -= 10
             self.done = True  
         
@@ -580,7 +666,7 @@ class SearchAndRescueEnv(gym.Env):
         
         # Check if Number of Steps Greater than Max Steps If So Set Episode to be Done - to Prevent the agent to Wander The environment indefinetly during learning
         if self.current_step > self.max_steps:
-            logging.info('[INFO] Maximum Steps Reached .. Ending the episode')
+            logging.info('[INFO] Maximum Steps Reached .. Ending the episode ')
             self.done = True
             
         # Calculate The Cummulative Reward
@@ -588,30 +674,25 @@ class SearchAndRescueEnv(gym.Env):
         if self.done:
             logging.info(f'[INFO] Episode Ending with Cumlative Reward : {self.cumulative_reward}') # This metric can be used to compare how well the agent performs with and without causal and digital mind
         
-        goal_delta = distance_3d(self.goal_position,self.robot_position)
-        # rl_info = []
-        # for idx in range(len(self.objectIDs)):
-        #     objectID = self.objectIDs[idx]
-        #     texture_class,causal_movability,object_position = self.get_texture_and_movability(objectID)
-        #     if (object_position[0] != None) and (object_position[1] != None):
-        #         object_delta_x = object_position[0] - self.robot_position[0]
-        #         object_delta_y = object_position[1] - self.robot_position[1]
-        #     else:
-        #         object_delta_x = self.objectPositions[objectID][0] - self.robot_position[0]
-        #         object_delta_y = self.objectPositions[objectID][1] - self.robot_position[1]
-        #     rl_info.append([causal_movability,int(object_delta_x),int(object_delta_y)])
-        # flattened_rl_info = [item for sublist in rl_info for item in sublist]
-        
-        observation = [int(self.robot_position[0]), int(self.robot_position[1]), goal_delta]   + list(self.prev_actions) #+ flattened_rl_info
+        # Compute scaled deltas
+        scaled_deltas = self.calculate_scaled_deltas(self.robot_position)
+        # Flatten scaled_deltas and add them to your observation
+        wall_deltas = [delta for deltas in scaled_deltas['walls'].values() for delta in deltas]  # Flatten wall deltas
+        goal_delta = scaled_deltas['goal']
+        # object_deltas = [delta for deltas in scaled_deltas['objects'].values() for delta in deltas]  # Flatten object deltas
+
+        observation = goal_delta + wall_deltas + list(self.prev_actions) #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
         observation = np.array(observation)
-        # print('[INFO] Observation Space : ',observation)
         info = {}
-        # print('Current Cummulative Reward : ',self.reward)
-        # for obj_id, obj in ENV_MANAGER.objects.items():
-        #     print(f"ObjectStruct(ID={obj.id},Texture Class = {obj.texture_class}, Texture={obj.texture},Current Position={obj.position}, Initial Position={obj.initial_position}, Casual Probability={obj.casual_probability}, Movability={obj.movability})")
         self.dump_digital_mind_to_json()
         return observation,self.reward,self.done,info
-
+    
+    def discretize_position(self, position,cell_size=1):
+        # Convert a continuous position to a grid cell, assuming position is a tuple (x, y, z)
+        grid_x = int(position[0] // cell_size)
+        grid_y = int(position[1] // cell_size)
+        return grid_x, grid_y
+    
     def dump_digital_mind_to_json(self):
         objects_data = {}
         for obj_id, obj in ENV_MANAGER.objects.items():
@@ -643,9 +724,6 @@ class SearchAndRescueEnv(gym.Env):
             json.dump(objects_data, json_file, indent=4)
             
     def reset(self):
-        # Generating the random map
-        
-
         # Reseting the Sim
         p.resetSimulation()
         p.setGravity(0, 0, -10)
@@ -698,6 +776,7 @@ class SearchAndRescueEnv(gym.Env):
         sorted_obj_ids = [0,1]
         for objectID in sorted_obj_ids:
             self.visual_predictions[objectID] = []
+        self.visitation_grid = np.zeros((height,width), dtype=np.int) 
         
         # Evaluation Init
         self.current_step = 0
@@ -715,24 +794,17 @@ class SearchAndRescueEnv(gym.Env):
         for obj_id, obj in ENV_MANAGER.objects.items():
             print(f"ObjectStruct(ID={obj.id},Texture Class = {obj.texture_class}, Texture={obj.texture},Current Position={obj.position}, Initial Position={obj.initial_position}, Casual Probability={obj.casual_probability}, Movability={obj.movability})")
         
-        # rl_info = []
-        # for idx in range(len(self.objectIDs)):
-        #     objectID = self.objectIDs[idx]
-        #     texture_class,causal_movability,object_position = self.get_texture_and_movability(objectID)
-        #     if (object_position[0] != None) and (object_position[1] != None):
-        #         object_delta_x = object_position[0] - self.robot_position[0]
-        #         object_delta_y = object_position[1] - self.robot_position[1]
-        #     else:
-        #         object_delta_x = self.objectPositions[objectID][0] - self.robot_position[0]
-        #         object_delta_y = self.objectPositions[objectID][1] - self.robot_position[1]
-        #     rl_info.append([causal_movability,int(object_delta_x),int(object_delta_y)])
-        # flattened_rl_info = [item for sublist in rl_info for item in sublist]
         logging.info(f'Retained Movability Knowledge : {self.movability_predictions} \n')
         logging.info(f'Retained Movability Predictions : {self.movability_dict}')
         logging.info(f'Retained Visual Prediction Knowledge : {self.visual_predictions} \n')
-        
-                
-        observation = [int(self.robot_position[0]), int(self.robot_position[1]), goal_delta]  + list(self.prev_actions) #+ flattened_rl_info
+
+        # Compute scaled deltas
+        scaled_deltas = self.calculate_scaled_deltas(self.robot_position)
+        # Flatten scaled_deltas and add them to your observation
+        wall_deltas = [delta for deltas in scaled_deltas['walls'].values() for delta in deltas]  # Flatten wall deltas
+        goal_delta = scaled_deltas['goal']
+    
+        observation = goal_delta + wall_deltas + list(self.prev_actions) #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
         observation = np.array(observation)
         return observation
 
