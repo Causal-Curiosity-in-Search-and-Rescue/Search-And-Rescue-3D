@@ -701,7 +701,7 @@ class SearchAndRescueEnv(gym.Env):
         goal_delta = scaled_deltas['goal']
         object_deltas = [delta for deltas in scaled_deltas['objects'].values() for delta in deltas]  # Flatten object deltas
 
-        observation = goal_delta + wall_deltas + object_deltas + list(self.prev_actions) #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
+        observation = goal_delta + list(self.prev_actions) #+ wall_deltas + object_deltas #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
         observation = np.array(observation)
         info = {}
         self.dump_digital_mind_to_json()
@@ -826,7 +826,7 @@ class SearchAndRescueEnv(gym.Env):
         goal_delta = scaled_deltas['goal']
         object_deltas = [delta for deltas in scaled_deltas['objects'].values() for delta in deltas]  # Flatten object deltas
 
-        observation = goal_delta + wall_deltas + object_deltas + list(self.prev_actions) #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
+        observation = goal_delta + list(self.prev_actions) # + wall_deltas + object_deltas #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
         observation = np.array(observation)
         return observation
 
