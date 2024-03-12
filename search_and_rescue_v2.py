@@ -22,6 +22,7 @@ from stable_baselines3 import PPO
 from digital_mind import EnvironmentObjectsManager
 from preprocessing import normalise_textures,get_texture_features
 from helpers import distance_3d,calculate_vector,calculate_cos_angle,quaternion_to_forward_vector,generate_maze_with_objects,visualisemaze
+import pickle
 import pdb
 
 # LOAD THE URDF FILES AND TEXTURES
@@ -38,13 +39,13 @@ SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 ENV_MANAGER = EnvironmentObjectsManager()
 
 # Define How Long the Robot should be Operational in the Environment
-AGENT_ACTION_LEN = 100
+AGENT_ACTION_LEN = 1000
 p.connect(p.GUI)
 
 height = 20
 width = 20
-num_m = 0 # Movable
-num_i = 1 # Immovable
+num_m = 5 # Movable
+num_i = 11 # Immovable
 num_s = 1 # Start Positions
 # MAP1 = [
 #     ['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w'],
@@ -68,7 +69,10 @@ num_s = 1 # Start Positions
 #     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
 #     ['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w']
 # ]
-
+map_plan = generate_maze_with_objects(height, width, num_m, num_i, num_s) # To Remove Randomization of env . let robot position be random
+with open('maze_plan.pkl','wb') as file:
+    pickle.dump(map_plan,file)
+visualisemaze(map_plan)
 
 def create_or_update_object(detected_object_id,texture_class,detected_x,detected_y,detected_z,detected_texture):
     attributes = {
@@ -86,7 +90,7 @@ class SearchAndRescueEnv(gym.Env):
     def __init__(self):
         super(SearchAndRescueEnv, self).__init__()
         self.action_space = spaces.Discrete(3)  # Forward, Left, Right
-        self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(21+AGENT_ACTION_LEN,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(3+AGENT_ACTION_LEN,), dtype=np.float32)
         
         # Initial Params
         self.movability_dict = {0:None,1:None}
@@ -369,12 +373,12 @@ class SearchAndRescueEnv(gym.Env):
                 sorted_obj_id = self.sort_obj_ids_truth(uid)
                 thresholded_prediction = self.apply_thresholding(sorted_obj_id,current_visual_prediction)
                 classified_image = "Cracked" if (thresholded_prediction == 1) else "Grooved"
-                print(f'[INFO] Classified Texture Class : {classified_image} - UID : {uid} - Position : {pos} -  {thresholded_prediction}')
+                print(f'[INFO] Classified Texture Class : {classified_image} - UID : {uid} - Position : {pos} -  {thresholded_prediction} - {distance} - {cos_angle}')
                 
                 #On getting close to object for inspection, get the predicted class
-                if distance<=1 and cos_angle < -0.30: # Robot is facing the object 
+                if distance<=1.5 and cos_angle < -0.40: # Robot is facing the object 
                     # Updated Vision Texture Classification 
-                    
+                    thresholded_prediction = self.apply_thresholding(sorted_obj_id,current_visual_prediction)
                     sensing_info.append(
                         {
                             'uid':sorted_obj_id,
@@ -385,7 +389,9 @@ class SearchAndRescueEnv(gym.Env):
                             'current_visual_prediction':thresholded_prediction
                         }
                     )
+                    
                 else:
+                    thresholded_prediction = None
                     sensing_info.append(
                         {
                             'uid':sorted_obj_id,
@@ -393,7 +399,7 @@ class SearchAndRescueEnv(gym.Env):
                             'cos_angle':cos_angle,
                             'is_facing_object':False,
                             'object_position_has_changed':None,
-                            'current_visual_prediction':thresholded_prediction
+                            'current_visual_prediction':None
                         }
                     )
                 
@@ -449,7 +455,6 @@ class SearchAndRescueEnv(gym.Env):
         # Calculate the displacement distances
         object_displacement = np.linalg.norm(np.array(initial_object_position) - np.array(new_object_position))
         robot_displacement = np.linalg.norm(np.array(initial_robot_position) - np.array(new_robot_position))
-
         # Determine if the object has moved significantly (more than the threshold)
         object_moved_significantly = object_displacement > movement_threshold
 
@@ -467,7 +472,6 @@ class SearchAndRescueEnv(gym.Env):
             dot_product = np.dot(norm_obj_vector, norm_robot_vector)
 
             # Check if the movement direction is similar (dot product close to 1)
-            pdb.set_trace()
             if dot_product > 0.5:  # Adjust this value based on how strict you want this check to be
                 aligned_movement = True
 
@@ -475,7 +479,7 @@ class SearchAndRescueEnv(gym.Env):
         return object_moved_significantly and aligned_movement
     
     def control_movability_update(self,uid):
-        if len(self.movability_predictions[uid]) > 4: # number of minimum interactions for it to update of movability
+        if len(self.movability_predictions[uid]) > 1: # number of minimum interactions for it to update of movability
             movability_prob =  np.mean(self.movability_predictions[uid])
             if movability_prob > MOVABILITY_THRESHOLD:
                 return 1
@@ -515,6 +519,7 @@ class SearchAndRescueEnv(gym.Env):
     def casual_reasoning_for_object_movability(self): # to be called and used in step
         texture = np.array([0,1])
         movability = np.array([1, 1])
+        state = 0
         for obj_id, obj in ENV_MANAGER.objects.items():
             
             if obj.movability == None:
@@ -542,33 +547,41 @@ class SearchAndRescueEnv(gym.Env):
                 
                 if (self.movability_dict[0] != None) and (self.movability_dict[1] != None):
                     logging.info(f'[METRIC] Causal Graph Created - Number of Interactions Required : {self.causal_interaction_count}') # Evaluation Metric
+                    logging.info(f"[METRIC] Minimum Number of Interactions for Movable Objects : {len(self.movability_predictions[1])}")
+                    logging.info(f"[METRIC] Minimum Number of Interactions for Immovable Objects : {len(self.movability_predictions[0])}")
+                    
                     movability = np.array([self.movability_dict[0],self.movability_dict[1]])
+                    state = 1
                 else:
                     movability = np.array([1, 1])# it will set everything to be movable on the truth table
-        
-        n = 100
-        aug_texture = np.tile(texture,n)
-        aug_movability = np.tile(movability,n)
-             
-        df = pd.DataFrame({
-            'Texture':aug_texture,
-            'Movability':aug_movability
-        })
-        causal_model = from_pandas_lasso(df,beta=0.001,w_threshold=0.1)
-        viz = plot_structure(causal_model,graph_attributes={"scale": "1.0"},all_node_attributes=NODE_STYLE.WEAK,all_edge_attributes=EDGE_STYLE.WEAK,prog='fdp')
-        viz.draw('causal_graph.png', format='png')
-        
-        bn = BayesianNetwork(causal_model)
-        bn = bn.fit_node_states(df)
-        bn = bn.fit_cpds(df, method="BayesianEstimator", bayes_prior="K2")
-        # Predicting the probabilities
-        predictions = bn.predict_probability(df, 'Movability')
-        # logging.info(f"Causal Probability Predicted : {predictions['Movability_1']}")
-        
-        binary_predictions = predictions['Movability_1'] > 0.5  # Adjust based on actual column names in predictions
-        
-        combined_df =  pd.concat([df, binary_predictions], axis=1)
-        self.store_causal_probability(combined_df)
+        try:
+            n = 100
+            aug_texture = np.tile(texture,n)
+            aug_movability = np.tile(movability,n)
+            
+            df = pd.DataFrame({
+                'Texture':aug_texture,
+                'Movability':aug_movability
+            })
+            causal_model = from_pandas_lasso(df,beta=0.001,w_threshold=0.1)
+            viz = plot_structure(causal_model,graph_attributes={"scale": "1.0"},all_node_attributes=NODE_STYLE.WEAK,all_edge_attributes=EDGE_STYLE.WEAK,prog='fdp')
+            viz.draw('causal_graph.png', format='png')
+            
+            bn = BayesianNetwork(causal_model)
+            bn = bn.fit_node_states(df)
+            bn = bn.fit_cpds(df, method="BayesianEstimator", bayes_prior="K2")
+            # Predicting the probabilities
+            predictions = bn.predict_probability(df, 'Movability')
+            # logging.info(f"Causal Probability Predicted : {predictions['Movability_1']}")
+            
+            binary_predictions = predictions['Movability_1'] > 0.5  # Adjust based on actual column names in predictions
+            
+            combined_df =  pd.concat([df, binary_predictions], axis=1)
+            self.store_causal_probability(combined_df)
+            if state == 1:
+                logging.info("[SCCS] Causal relation was Created using Interactions ")
+        except Exception as Error:
+            logging.info("[ERR] Causal Relation Could not be Created Due to False Positives in Predictions Leading to Invalid Interactions")
         
     def get_texture_and_movability(self,objectID):
         sorted_obj_id = self.sort_obj_ids_truth(objectID)
@@ -670,7 +683,7 @@ class SearchAndRescueEnv(gym.Env):
         collision_info = self.check_collision_with_walls()
         if collision_info['has_collided']:
             logging.info('[INFO] Has Colided With Wall ')
-            self.reward -= 1
+            self.reward = -10
             self.done = True  
         
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
@@ -678,7 +691,7 @@ class SearchAndRescueEnv(gym.Env):
         goal_collision_info = self.check_collision_with_goal_and_update_state(self.robot_position)
         if goal_collision_info['reached_goal']:
             logging.info('[INFO] Has Reached Goal ')
-            self.reward += 200
+            self.reward = 200
             self.done = True
         
         self.last_action = action
@@ -701,7 +714,7 @@ class SearchAndRescueEnv(gym.Env):
         goal_delta = scaled_deltas['goal']
         object_deltas = [delta for deltas in scaled_deltas['objects'].values() for delta in deltas]  # Flatten object deltas
 
-        observation = goal_delta + list(self.prev_actions) #+ wall_deltas + object_deltas #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
+        observation = goal_delta + list(self.prev_actions)# + object_deltas #+ wall_deltas + object_deltas #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
         observation = np.array(observation)
         info = {}
         self.dump_digital_mind_to_json()
@@ -749,7 +762,6 @@ class SearchAndRescueEnv(gym.Env):
         p.setGravity(0, 0, -10)
         p.resetDebugVisualizerCamera(cameraDistance=20, cameraYaw=-90, cameraPitch=-91,
                                             cameraTargetPosition=[9, 9, 0])
-        map_plan = generate_maze_with_objects(height, width, num_m, num_i, num_s) # To Remove Randomization of env . let robot position be random
         
         # enable real time simulation
         p.setRealTimeSimulation(1)
