@@ -86,7 +86,7 @@ class SearchAndRescueEnv(gym.Env):
     def __init__(self):
         super(SearchAndRescueEnv, self).__init__()
         self.action_space = spaces.Discrete(3)  # Forward, Left, Right
-        self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(3+AGENT_ACTION_LEN,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(15+AGENT_ACTION_LEN,), dtype=np.float32)
         
         # Initial Params
         self.movability_dict = {0:None,1:None}
