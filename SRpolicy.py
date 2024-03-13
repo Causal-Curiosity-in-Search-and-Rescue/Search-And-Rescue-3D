@@ -29,23 +29,23 @@ class CustomPolicy(ActorCriticPolicy):
         self.fc1 = nn.Linear(features_dim, 128)
         self.fc2 = nn.Linear(128, 64)
         
-        self.action_out = nn.Linear(64, action_space.n)
-        self.value_out = nn.Linear(64, 1)  # Value output layer
+        # self.action_out = nn.Linear(64, action_space.n)
+        # self.value_out = nn.Linear(64, 1)  # Value output layer
         
-        # self.action_net = nn.Sequential(
-        #     nn.Linear(256, 128),
-        #     nn.ReLU(),
-        #     nn.Linear(128, 64),
-        #     nn.ReLU(),
-        #     nn.Linear(64, action_space.n)
-        # )
-        # self.value_net = nn.Sequential(
-        #     nn.Linear(256, 128),
-        #     nn.ReLU(),
-        #     nn.Linear(128, 64),
-        #     nn.ReLU(),
-        #     nn.Linear(64, 1)
-        # )
+        self.action_out = nn.Sequential(
+            nn.Linear(64, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, action_space.n)
+        )
+        self.value_out = nn.Sequential(
+            nn.Linear(64, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1)
+        )
 
     def forward(self, obs, deterministic=False):
         # Custom feature extraction logic
