@@ -9,8 +9,9 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 import gym
 
 class CustomFeatureExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space: gym.spaces.Dict, features_dim: int = 256):
-        super(CustomFeatureExtractor, self).__init__(observation_space, features_dim)
+    def __init__(self, observation_space: gym.spaces.Dict):
+        features_dim = 256
+        super(CustomFeatureExtractor, self).__init__(observation_space,features_dim)
         # Here you should add any specific layers you need to process your observations
         # For example, for simplicity, let's concatenate everything into one big vector
         # Note: You should replace 'n_objects' and 'AGENT_ACTION_LEN' with their actual values
