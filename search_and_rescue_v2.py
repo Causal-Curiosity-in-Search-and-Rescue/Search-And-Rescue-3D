@@ -112,7 +112,7 @@ class SearchAndRescueEnv(gym.Env):
         sorted_obj_ids = [0,1]
         for objectID in sorted_obj_ids:
             self.movability_predictions[objectID] = []
-            self.causal_probablity_dict[objectID] = -1
+            self.causal_probablity_dict[objectID] = 0 # Set 0 for default and do + for the actual 
     
     def create_walls(self,map_plan):
         # define ground
@@ -760,8 +760,10 @@ class SearchAndRescueEnv(gym.Env):
         if sensing_info['is_facing_object']:
             index = sorted_object_ids.index(sensing_info['obj_id'])
             for obj_id, obj in ENV_MANAGER.objects.items():
-                self.uid_texture_class_pred[index]=obj.texture_class
-                self.uid_movable_class_pred[index]=obj.casual_probability
+                if obj.id == sensing_info['obj_id']:
+                    if obj.texture_class != None:
+                        self.uid_texture_class_pred[index]=obj.texture_class + 1
+                        self.uid_movable_class_pred[index]=obj.casual_probability + 1
         
         observation_space = {
             'goal_position': goal_delta,
@@ -896,8 +898,8 @@ class SearchAndRescueEnv(gym.Env):
         self.uid_texture_class_pred = []
         self.uid_movable_class_pred = []
         for object_id, object_position in self.objectPositions.items(): 
-            self.uid_texture_class_pred.append(-1)
-            self.uid_movable_class_pred.append(-1)
+            self.uid_texture_class_pred.append(0)
+            self.uid_movable_class_pred.append(0)
         
         observation_space = {
             'goal_position': goal_delta,
