@@ -482,8 +482,10 @@ class SearchAndRescueEnv(gym.Env):
         if len(self.movability_predictions[uid]) > 1: # number of minimum interactions for it to update of movability
             movability_prob =  np.mean(self.movability_predictions[uid])
             if movability_prob > MOVABILITY_THRESHOLD:
+                self.movability_dict[uid] = 1
                 return 1
             else:
+                self.movability_dict[uid] = 0
                 return 0
         else:
             return None
@@ -516,6 +518,8 @@ class SearchAndRescueEnv(gym.Env):
             
             if obj.id == 1:
                 obj.movability = self.control_movability_update(1)
+    
+    
 
     def store_causal_probability(self,df):
         texture_0_movability = df[df['Texture'] == 0]['Movability_1'].iloc[0]
