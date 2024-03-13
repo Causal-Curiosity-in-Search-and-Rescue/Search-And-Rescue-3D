@@ -64,19 +64,17 @@ class CustomPolicy(ActorCriticPolicy):
         x = F.relu(self.fc(combined))
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        action_logits = self.action_out(x)
-        value = self.value_out(x)  # Calculate value
-        actions = torch.argmax(action_logits, dim=1)
-        # if deterministic:
-        #     actions = torch.argmax(action_logits, dim=1)
-        # else:
-        #     action_probs = F.softmax(action_logits, dim=-1)
-        #     actions = torch.multinomial(action_probs, 1).squeeze(1)
-        
-        # log_probs = F.log_softmax(action_logits, dim=-1)
 
-        # # Ensure log_probs has the shape [batch_size, num_actions]
-        # if len(log_probs.shape) == 1:
-        #     log_probs = log_probs.unsqueeze(0)
+         # Generate action logits and value
+        action_logits = self.action_net(x)
+        value = self.value_net(x)  # Calculate value
 
-        return actions, actions, actions
+        if deterministic:
+            actions = torch.argmax(action_logits, dim=1)
+        else:
+            # Use softmax for action distribution for exploration
+            action_probs = F.softmax(action_logits, dim=-1)
+            action_dist = torch.distributions.Categorical(action_probs)
+            actions = action_dist.sample()
+
+        return actions, action_logits, value  # Return raw logits for training
