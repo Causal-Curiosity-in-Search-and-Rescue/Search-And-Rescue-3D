@@ -95,11 +95,9 @@ class SearchAndRescueEnv(gym.Env):
         # Define the observation space
         self.observation_space = spaces.Dict({
             'goal_position': spaces.Box(low=np.array([-np.inf, -np.inf, -np.inf]), high=np.array([np.inf, np.inf, np.inf]), dtype=np.float32),
-            'objects_info': spaces.Dict({
-                'positions': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 3), dtype=np.float32), 
-                'texture_classes': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming texture classes are integers
-                'movable': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32)  # Assuming movable flags are integers
-            }),
+            'object_positions': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 3), dtype=np.float32),
+            'object_textures': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming texture classes are integers
+            'object_movables': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming movable flags are integers
             'walls_info': spaces.Box(low=-np.inf, high=np.inf, shape=(4, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z)
             'collision_info': spaces.Discrete(5),  # 0: No collision, 1: Collided with wall, 2: Collided with immovable, 3: Collided with movable, 4: collision with goal
             'previous_actions': spaces.MultiDiscrete([3] * AGENT_ACTION_LEN)
@@ -765,17 +763,15 @@ class SearchAndRescueEnv(gym.Env):
                 self.uid_texture_class_pred[index]=obj.texture_class
                 self.uid_movable_class_pred[index]=obj.casual_probability
         
-        observation_space = spaces.Dict({
+        observation_space = {
             'goal_position': goal_delta,
-            'objects_info': {
-                'positions': objects_delta, 
-                'texture_classes':np.array(self.uid_texture_class_pred),  
-                'movable': np.array(self.uid_movable_class_pred)  # use Causal Probability of Movability Here 
-            },
+            'object_positions': objects_delta,
+            'object_textures':np.array(self.uid_texture_class_pred),
+            'object_movables':np.array(self.uid_movable_class_pred), 
             'walls_info':walls_delta,
             'collision_info': collision_status,  # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
             'previous_actions': np.array(list(self.prev_actions), dtype=np.int32)
-        })
+        }
         info = {}
         self.dump_digital_mind_to_json()
         return observation_space,self.reward,self.done,info
@@ -903,17 +899,16 @@ class SearchAndRescueEnv(gym.Env):
             self.uid_texture_class_pred.append(-1)
             self.uid_movable_class_pred.append(-1)
         
-        observation_space = spaces.Dict({
+        observation_space = {
             'goal_position': goal_delta,
-            'objects_info': {
-                'positions': objects_delta, 
-                'texture_classes':np.array(self.uid_texture_class_pred),  
-                'movable': np.array(self.uid_movable_class_pred)  # use Causal Probability of Movability Here 
-            },
+            'object_positions': objects_delta,
+            'object_textures':np.array(self.uid_texture_class_pred),
+            'object_movables':np.array(self.uid_movable_class_pred),
             'walls_info':walls_delta,
             'collision_info': 0,  # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
             'previous_actions': np.array(list(self.prev_actions), dtype=np.int32)
-        })
+        }
+        print(observation_space)
         
         # observation = goal_delta + list(self.prev_actions) # + wall_deltas + object_deltas #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
         # observation = np.array(observation)
@@ -943,7 +938,7 @@ env = SearchAndRescueEnv()
 # Then, sprinkle logging statements in your code:
 env.reset()
 done = False
-model = PPO('MlpPolicy', env, verbose=1)
+model = PPO('MultiInputPolicy', env, verbose=1)
 logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
 
 TIMESTEPS = 10000
@@ -954,7 +949,7 @@ while iters < 10:
     model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
     model.save("ppo_learned")
 
-# # UNIT-TEST
+# UNIT-TEST
 # try:
 #     while not done:
 #         action = env.action_space.sample()  # Take a random action or implement your control logic here
