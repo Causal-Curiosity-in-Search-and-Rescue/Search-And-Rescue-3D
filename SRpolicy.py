@@ -66,6 +66,7 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
         
         # Instead of directly using CustomPolicy here, it will now receive features from the feature extractor
         total_features_dim = kwargs.get('features_dim', 256)  # This should match what's defined in your feature extractor
+        self.features_dim = total_features_dim
         self.net = CustomPolicy(total_features_dim, action_space.n)
 
     def _build(self, lr_schedule):

@@ -942,7 +942,7 @@ env = SearchAndRescueEnv()
 env.reset()
 done = False
 
-model = PPO(CustomActorCriticPolicy, env, verbose=1, policy_kwargs={"features_extractor_class": CustomFeatureExtractor, "features_dim": 256})
+model = PPO(CustomActorCriticPolicy, env, verbose=1, policy_kwargs={"features_extractor_class": CustomFeatureExtractor})
 logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
 
 TIMESTEPS = 10000
