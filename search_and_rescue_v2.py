@@ -101,7 +101,7 @@ class SearchAndRescueEnv(gym.Env):
             'object_movables': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming movable flags are integers
             'walls_info': spaces.Box(low=-np.inf, high=np.inf, shape=(4, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z)
             'collision_info': spaces.Discrete(5),  # 0: No collision, 1: Collided with wall, 2: Collided with immovable, 3: Collided with movable, 4: collision with goal
-            'previous_actions': spaces.MultiDiscrete([3] * AGENT_ACTION_LEN)
+            'previous_actions': spaces.Box(low=-1.0, high=2.0, shape=(AGENT_ACTION_LEN,), dtype=np.float32)
         })
         # self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(3+AGENT_ACTION_LEN,), dtype=np.float32)
         
