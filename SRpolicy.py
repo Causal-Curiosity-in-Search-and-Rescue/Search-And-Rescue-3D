@@ -68,12 +68,12 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
         # Instead of directly using CustomPolicy here, it will now receive features from the feature extractor
         total_features_dim = kwargs.get('features_dim', 256)  # This should match what's defined in your feature extractor
         self.features_dim = total_features_dim
-        self.net = CustomPolicy(total_features_dim, action_space.n)
+        self.net = CustomPolicy(total_features_dim, action_space)
 
     def _build(self, lr_schedule):
         # This is where we build the model
         # Note: No need to call super()._build() as we redefine everything here
-        self.mlp_extractor = self.features_extractor_class(self.observation_space, self.features_dim)
+        self.mlp_extractor = self.features_extractor_class(self.observation_space)
 
     def forward(self, obs, deterministic=False):
         # Here, obs is a dict from your environment's observation space
