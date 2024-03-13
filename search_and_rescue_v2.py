@@ -22,8 +22,7 @@ from stable_baselines3 import PPO
 from digital_mind import EnvironmentObjectsManager
 from preprocessing import normalise_textures,get_texture_features
 from helpers import distance_3d,calculate_vector,calculate_cos_angle,quaternion_to_forward_vector,generate_maze_with_objects,visualisemaze
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-from SRpolicy import CustomActorCriticPolicy
+from SRpolicy import CustomActorCriticPolicy,CustomFeatureExtractor
 import pickle
 import pdb
 
@@ -943,7 +942,7 @@ env = SearchAndRescueEnv()
 env.reset()
 done = False
 
-model = PPO(CustomActorCriticPolicy, env, verbose=1, policy_kwargs={"features_extractor_class": BaseFeaturesExtractor})
+model = PPO(CustomActorCriticPolicy, env, verbose=1, policy_kwargs={"features_extractor_class": CustomFeatureExtractor, "features_dim": 256})
 logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
 
 TIMESTEPS = 10000

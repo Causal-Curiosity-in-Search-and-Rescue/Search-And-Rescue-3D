@@ -5,74 +5,52 @@ from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.distributions import Distribution, make_proba_distribution
 import numpy as np
 import torch.nn.functional as F
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+import gym
 
-# class CustomPolicy(ActorCriticPolicy):
-#     def __init__(self, observation_space, action_space, lr_schedule, **kwargs):
-#         super().__init__(observation_space, action_space, lr_schedule, **kwargs)
+class CustomFeatureExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space: gym.spaces.Dict, features_dim: int = 256):
+        super(CustomFeatureExtractor, self).__init__(observation_space, features_dim)
+        # Here you should add any specific layers you need to process your observations
+        # For example, for simplicity, let's concatenate everything into one big vector
+        # Note: You should replace 'n_objects' and 'AGENT_ACTION_LEN' with their actual values
+        num_m = 9 # Movable
+        num_i = 11 # Immovable
+        num_s = 1 # Start Positions
+        n_texture_classes = 2
+        n_objects = num_m + 1 + num_i
+        AGENT_ACTION_LEN = 1000# Your actual length
 
-#         # Assuming num_m, num_i, and other dimensions based on your setup
-#         num_m = 9  # Movable
-#         num_i = 11  # Immovable
-#         num_s = 1  # Start Positions
-#         self.n_objects = num_m + 1 + num_i
-#         self.agent_action_len = 1000  # Placeholder, adjust according to your needs
-#         self.action_dist = make_proba_distribution(action_space)
+        total_dim = np.prod(observation_space['goal_position'].shape) + \
+                    np.prod(observation_space['object_positions'].shape) + \
+                    np.prod(observation_space['object_textures'].shape) + \
+                    np.prod(observation_space['object_movables'].shape) + \
+                    np.prod(observation_space['walls_info'].shape) + \
+                    np.prod([1]) + \
+                    np.prod(observation_space['previous_actions'].shape)
+                    
+        self.flatten = nn.Flatten()
+        self.fc = nn.Linear(total_dim, features_dim)
 
-#         # Define the separate branches based on your provided structure
-#         self.goal_position_branch = nn.Sequential(nn.Linear(3, 64), nn.ReLU(), nn.Linear(64, 128), nn.ReLU())
-#         self.object_positions_branch = nn.Sequential(nn.Linear(self.n_objects * 3, 256), nn.ReLU(), nn.Linear(256, 128), nn.ReLU())
-#         self.object_attributes_branch = nn.Sequential(nn.Linear(self.n_objects * 2, 128), nn.ReLU(), nn.Linear(128, 64), nn.ReLU())
-#         self.walls_info_branch = nn.Sequential(nn.Linear(4 * 3, 64), nn.ReLU(), nn.Linear(64, 64), nn.ReLU())
-#         self.previous_actions_branch = nn.Sequential(nn.Linear(self.agent_action_len, 32), nn.ReLU(), nn.Linear(32, 64), nn.ReLU())
-#         self.collision_info_branch = nn.Sequential(nn.Embedding(5, 10), nn.Flatten(), nn.Linear(10, 32), nn.ReLU())
+    def forward(self, observations):
+        # Flatten and concatenate all parts of the observations
+        goal_pos = self.flatten(observations['goal_position'])
+        obj_pos = self.flatten(observations['object_positions'])
+        obj_tex = self.flatten(observations['object_textures'])
+        obj_mov = self.flatten(observations['object_movables'])
+        walls_info = self.flatten(observations['walls_info'])
+        collision_info = observations['collision_info'].float().unsqueeze(-1)  # Add an extra dimension to match
+        prev_actions = self.flatten(observations['previous_actions'])
 
-#         # Combine the branches
-#         total_features = 128 + 128 + 64 + 64 + 64 + 32  # Sum of all branch outputs
-#         self.combined_network = nn.Sequential(nn.Linear(total_features, 256), nn.ReLU(), nn.Linear(256, 128), nn.ReLU())
-
-#         # Additional actor and critic specific layers if necessary
-#         # Adjust these dimensions according to your environment's action space
-#         self.actor = nn.Linear(128, action_space.n)  # For discrete action spaces
-#         self.critic = nn.Linear(128, 1)  # Typically outputs a single value for value estimation
-
-#     def forward(self, obs):
-#         goal_features = self.goal_position_branch(obs['goal_position'])
-#         object_pos_features = self.object_positions_branch(obs['object_positions'].reshape(-1, self.n_objects * 3))
-#         object_attr_features = self.object_attributes_branch(th.cat([obs['object_textures'].float(), obs['object_movables'].float()], dim=1))
-#         wall_features = self.walls_info_branch(obs['walls_info'].reshape(-1, 4 * 3))
-#         prev_action_features = self.previous_actions_branch(obs['previous_actions'].float())
-#         collision_features = self.collision_info_branch(obs['collision_info'])
-
-#         combined_features = th.cat([goal_features, object_pos_features, object_attr_features, wall_features, prev_action_features, collision_features], dim=1)
-#         combined_output = self.combined_network(combined_features)
-
-#         # Actor and critic networks
-#         action_logits = self.actor(combined_output)
-#         value_estimate = self.critic(combined_output)
-#         return action_logits, value_estimate
-
-#     def _predict(self, observation, deterministic=False):
-#         # This method is used for predictions
-#         action_logits, _ = self.forward(observation)
-#         # Create the distribution and sample actions
-#         action_distribution = self.action_dist.proba_distribution(action_logits)
-#         actions = action_distribution.get_actions(deterministic=deterministic)
-#         return actions
-
-#     def evaluate_actions(self, obs, actions):
-#         # This method is used during learning to evaluate the actions taken
-#         action_logits, values = self.forward(obs)
-#         dist = self.action_dist.proba_distribution(action_logits)
-#         log_prob = dist.log_prob(actions)
-#         entropy = dist.entropy()
-#         return values, log_prob, entropy
+        combined = torch.cat([goal_pos, obj_pos, obj_tex, obj_mov, walls_info, collision_info, prev_actions], dim=1)
+        return self.fc(combined)
 
 
 class CustomPolicy(nn.Module):
-    def __init__(self, observation_space, action_space):
+    def __init__(self, features_dim, action_space):
         super(CustomPolicy, self).__init__()
-        # Example architecture, adjust as needed
-        self.fc1 = nn.Linear(np.prod(observation_space.shape), 128)
+        # Adjust these layers according to the output of your feature extractor
+        self.fc1 = nn.Linear(features_dim, 128)
         self.fc2 = nn.Linear(128, 64)
         self.action_out = nn.Linear(64, action_space.n)
 
@@ -83,16 +61,19 @@ class CustomPolicy(nn.Module):
         return action_logits
 
 class CustomActorCriticPolicy(ActorCriticPolicy):
-    def __init__(self, observation_space, action_space, lr_schedule, features_extractor_class, *args, **kwargs):
+    def __init__(self, observation_space, action_space, lr_schedule, features_extractor_class=CustomFeatureExtractor, *args, **kwargs):
         super().__init__(observation_space, action_space, lr_schedule, features_extractor_class, *args, **kwargs)
-        self.net = CustomPolicy(observation_space, action_space)
         
-    def _build_mlp_extractor(self):
-        # This method is required but you might not need to implement anything
-        pass
+        # Instead of directly using CustomPolicy here, it will now receive features from the feature extractor
+        total_features_dim = kwargs.get('features_dim', 256)  # This should match what's defined in your feature extractor
+        self.net = CustomPolicy(total_features_dim, action_space.n)
+
+    def _build(self, lr_schedule):
+        # This is where we build the model
+        # Note: No need to call super()._build() as we redefine everything here
+        self.mlp_extractor = self.features_extractor_class(self.observation_space, self.features_dim)
 
     def forward(self, obs, deterministic=False):
-        # You may need to preprocess obs if it's not already a tensor
-        obs = torch.as_tensor(obs).float()
-        action_logits = self.net(obs)
-        return action_logits
+        # Here, obs is a dict from your environment's observation space
+        features = self.extract_features(obs)
+        return self.net(features)
