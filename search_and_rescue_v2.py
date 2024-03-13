@@ -97,8 +97,8 @@ class SearchAndRescueEnv(gym.Env):
             'goal_position': spaces.Box(low=np.array([-np.inf, -np.inf, -np.inf]), high=np.array([np.inf, np.inf, np.inf]), dtype=np.float32),
             'objects_info': spaces.Dict({
                 'positions': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 3), dtype=np.float32), 
-                'texture_classes': spaces.MultiDiscrete([n_texture_classes] * n_objects),  
-                'movable': spaces.MultiBinary(n_objects)  # use Causal Probability of Movability Here 
+                'texture_classes': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming texture classes are integers
+                'movable': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32)  # Assuming movable flags are integers
             }),
             'walls_info': spaces.Box(low=-np.inf, high=np.inf, shape=(4, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z)
             'collision_info': spaces.Discrete(5),  # 0: No collision, 1: Collided with wall, 2: Collided with immovable, 3: Collided with movable, 4: collision with goal
