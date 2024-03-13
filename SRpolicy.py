@@ -7,14 +7,12 @@ import numpy as np
 import torch.nn.functional as F
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 import gym
+import pdb 
 
 class CustomFeatureExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space: gym.spaces.Dict):
+    def __init__(self, observation_space: gym.spaces):
         features_dim = 256
         super(CustomFeatureExtractor, self).__init__(observation_space,features_dim)
-        # Here you should add any specific layers you need to process your observations
-        # For example, for simplicity, let's concatenate everything into one big vector
-        # Note: You should replace 'n_objects' and 'AGENT_ACTION_LEN' with their actual values
         num_m = 9 # Movable
         num_i = 11 # Immovable
         num_s = 1 # Start Positions
@@ -22,27 +20,22 @@ class CustomFeatureExtractor(BaseFeaturesExtractor):
         n_objects = num_m + 1 + num_i
         AGENT_ACTION_LEN = 1000# Your actual length
 
-        total_dim = np.prod(observation_space['goal_position'].shape) + \
-                    np.prod(observation_space['object_positions'].shape) + \
-                    np.prod(observation_space['object_textures'].shape) + \
-                    np.prod(observation_space['object_movables'].shape) + \
-                    np.prod(observation_space['walls_info'].shape) + \
-                    np.prod([1]) + \
-                    np.prod(observation_space['previous_actions'].shape)
-                    
+         # Calculate the total dimension after flattening all parts of the observation space
+        total_dim = np.prod([3]) + np.prod([n_objects, 3]) +  n_objects + n_objects + np.prod([4, 3]) + 1 + np.prod([1000]) 
         self.flatten = nn.Flatten()
         self.fc = nn.Linear(total_dim, features_dim)
 
     def forward(self, observations):
-        # Flatten and concatenate all parts of the observations
-        goal_pos = self.flatten(observations['goal_position'])
-        obj_pos = self.flatten(observations['object_positions'])
-        obj_tex = self.flatten(observations['object_textures'])
-        obj_mov = self.flatten(observations['object_movables'])
-        walls_info = self.flatten(observations['walls_info'])
-        collision_info = observations['collision_info'].float().unsqueeze(-1)  # Add an extra dimension to match
-        prev_actions = self.flatten(observations['previous_actions'])
+        # Convert each part of the observation from NumPy to PyTorch tensor and ensure it's flattened correctly
+        goal_pos = self.flatten(torch.tensor(observations['goal_position'], dtype=torch.float32))
+        obj_pos = self.flatten(torch.tensor(observations['object_positions'], dtype=torch.float32))
+        obj_tex = self.flatten(torch.tensor(observations['object_textures'], dtype=torch.float32))
+        obj_mov = self.flatten(torch.tensor(observations['object_movables'], dtype=torch.float32))
+        walls_info = self.flatten(torch.tensor(observations['walls_info'], dtype=torch.float32))
+        collision_info = torch.tensor(observations['collision_info'], dtype=torch.float32).unsqueeze(-1)  # This is already a single value, so we make it a batched single value
+        prev_actions = self.flatten(torch.tensor(observations['previous_actions'], dtype=torch.float32))
 
+        # Combine all the tensors into one large tensor
         combined = torch.cat([goal_pos, obj_pos, obj_tex, obj_mov, walls_info, collision_info, prev_actions], dim=1)
         return self.fc(combined)
 

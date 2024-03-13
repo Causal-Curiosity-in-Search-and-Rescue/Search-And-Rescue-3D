@@ -775,6 +775,7 @@ class SearchAndRescueEnv(gym.Env):
             'collision_info': collision_status,  # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
             'previous_actions': np.array(list(self.prev_actions), dtype=np.int32)
         }
+        print('in Step : ',observation_space)
         info = {}
         self.dump_digital_mind_to_json()
         return observation_space,self.reward,self.done,info
@@ -911,7 +912,7 @@ class SearchAndRescueEnv(gym.Env):
             'collision_info': 0,  # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
             'previous_actions': np.array(list(self.prev_actions), dtype=np.int32)
         }
-        print(observation_space)
+        print('in Reset ',observation_space)
         
         # observation = goal_delta + list(self.prev_actions) # + wall_deltas + object_deltas #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
         # observation = np.array(observation)
