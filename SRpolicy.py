@@ -9,19 +9,19 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 import gym
 import pdb 
 
-class CustomFeatureExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space: gym.spaces):
+lass CustomFeatureExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space: gym.spaces.Dict):
         features_dim = 256
-        super(CustomFeatureExtractor, self).__init__(observation_space,features_dim)
-        num_m = 9 # Movable
-        num_i = 11 # Immovable
-        num_s = 1 # Start Positions
+        super(CustomFeatureExtractor, self).__init__(observation_space, features_dim)
+        num_m = 9  # Movable
+        num_i = 11  # Immovable
+        num_s = 1  # Start Positions
         n_texture_classes = 2
         n_objects = num_m + 1 + num_i
-        AGENT_ACTION_LEN = 1000# Your actual length
+        AGENT_ACTION_LEN = 1000  # Your actual length
 
-         # Calculate the total dimension after flattening all parts of the observation space
-        total_dim = np.prod([3]) + np.prod([n_objects, 3]) +  n_objects + n_objects + np.prod([4, 3]) + 1 + np.prod([1000]) 
+        # Calculate the total dimension after flattening all parts of the observation space
+        total_dim = np.prod([3]) + np.prod([n_objects, 3]) + n_objects + n_objects + np.prod([4, 3]) + 1 + np.prod([1000])
         self.flatten = nn.Flatten()
         self.fc = nn.Linear(total_dim, features_dim)
 
@@ -70,5 +70,5 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
 
     def forward(self, obs, deterministic=False):
         # Here, obs is a dict from your environment's observation space
-        features = self.extract_features(obs)
+        features = self.mlp_extractor(obs)
         return self.net(features)
