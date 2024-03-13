@@ -44,7 +44,7 @@ p.connect(p.GUI)
 
 height = 20
 width = 20
-num_m = 5 # Movable
+num_m = 9 # Movable
 num_i = 11 # Immovable
 num_s = 1 # Start Positions
 # MAP1 = [
