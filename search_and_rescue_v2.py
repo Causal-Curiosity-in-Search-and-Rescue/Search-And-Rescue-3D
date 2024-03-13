@@ -47,6 +47,8 @@ width = 20
 num_m = 9 # Movable
 num_i = 11 # Immovable
 num_s = 1 # Start Positions
+n_texture_classes = 2
+n_objects = num_m + 1 + num_i
 # MAP1 = [
 #     ['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w'],
 #     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
@@ -90,16 +92,29 @@ class SearchAndRescueEnv(gym.Env):
     def __init__(self):
         super(SearchAndRescueEnv, self).__init__()
         self.action_space = spaces.Discrete(3)  # Forward, Left, Right
-        self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(3+AGENT_ACTION_LEN,), dtype=np.float32)
+        # Define the observation space
+        self.observation_space = spaces.Dict({
+            'goal_position': spaces.Box(low=np.array([-np.inf, -np.inf, -np.inf]), high=np.array([np.inf, np.inf, np.inf]), dtype=np.float32),
+            'objects_info': spaces.Dict({
+                'positions': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 3), dtype=np.float32), 
+                'texture_classes': spaces.MultiDiscrete([n_texture_classes] * n_objects),  
+                'movable': spaces.MultiBinary(n_objects)  # use Causal Probability of Movability Here 
+            }),
+            'walls_info': spaces.Box(low=-np.inf, high=np.inf, shape=(4, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z)
+            'collision_info': spaces.Discrete(5),  # 0: No collision, 1: Collided with wall, 2: Collided with immovable, 3: Collided with movable, 4: collision with goal
+            'previous_actions': spaces.MultiDiscrete([3] * AGENT_ACTION_LEN)
+        })
+        # self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(3+AGENT_ACTION_LEN,), dtype=np.float32)
         
         # Initial Params
         self.movability_dict = {0:None,1:None}
         self.movability_predictions = {}
         self.causal_interaction_count = 0
+        self.causal_probablity_dict = {}
         sorted_obj_ids = [0,1]
         for objectID in sorted_obj_ids:
             self.movability_predictions[objectID] = []
-        
+            self.causal_probablity_dict[objectID] = -1
     
     def create_walls(self,map_plan):
         # define ground
@@ -382,6 +397,7 @@ class SearchAndRescueEnv(gym.Env):
                     sensing_info.append(
                         {
                             'uid':sorted_obj_id,
+                            'obj_id':uid,
                             'distance': distance,
                             'cos_angle':cos_angle,
                             'is_facing_object':True,
@@ -395,6 +411,7 @@ class SearchAndRescueEnv(gym.Env):
                     sensing_info.append(
                         {
                             'uid':sorted_obj_id,
+                            'obj_id':uid,
                             'distance': distance,
                             'cos_angle':cos_angle,
                             'is_facing_object':False,
@@ -426,22 +443,6 @@ class SearchAndRescueEnv(gym.Env):
                 return 0
         else:
             return None # This allows for Predictions to be more stable
-    
-    def check_if_object_position_has_changed(self): # Relative to seeing if object has moved as a result of robot moving against the object its facing and comparing previous positions
-        if (((self.previous_position[0]-0.01) < self.robot_position[0] < (self.previous_position[0]+0.01)) and ((self.previous_position[1]-0.01) < self.robot_position[1] < (self.previous_position[1]+0.01))):
-            return False
-        else:
-            return True
-        
-    def has_object_moved(self, uid, movement_threshold=0.05):
-        new_position,_ = p.getBasePositionAndOrientation(uid)
-        initial_position = self.objectPositions[uid]
-        # Calculate the distance moved
-        distance_moved = np.linalg.norm(np.array(initial_position) - np.array(new_position))
-        truth_array_moved = distance_moved > movement_threshold
-        truth_moved = np.mean(truth_array_moved) > 0.5
-        # Check if the distance moved is greater than the threshold
-        return truth_moved
     
     def has_object_moved_due_to_robot(self, uid, movement_threshold=0.05):
         # Get the new position of the object and the robot
@@ -498,22 +499,34 @@ class SearchAndRescueEnv(gym.Env):
                         if obj.id == info['uid']:
                             if obj.movability == None:
                                 self.movability_predictions[info['uid']].append(0)
-                                obj.movability = self.control_movability_update(info['uid'])
+                                # obj.movability = self.control_movability_update(info['uid'])
                             
                 if info['object_position_has_changed']:
                     for obj_id, obj in ENV_MANAGER.objects.items():
                         if obj.id == info['uid']:
                             if obj.movability == None:
                                 self.movability_predictions[info['uid']].append(1)
-                                obj.movability = self.control_movability_update(info['uid'])
+                                # obj.movability = self.control_movability_update(info['uid'])
         
+        self.check_movability_predictions_and_update_digital_mind()
+    
+    def check_movability_predictions_and_update_digital_mind(self):
+        for obj_id, obj in ENV_MANAGER.objects.items():
+            if obj.id == 0:
+                obj.movability = self.control_movability_update(0)
+            
+            if obj.id == 1:
+                obj.movability = self.control_movability_update(1)
+
     def store_causal_probability(self,df):
         texture_0_movability = df[df['Texture'] == 0]['Movability_1'].iloc[0]
         texture_1_movability = df[df['Texture'] == 1]['Movability_1'].iloc[0]
         for obj_id, obj in ENV_MANAGER.objects.items():
             if obj.texture_class == 0:
+                self.causal_probablity_dict[0] = int(texture_0_movability)
                 obj.casual_probability = int(texture_0_movability)
             else:
+                self.causal_probablity_dict[1] = int(texture_1_movability)
                 obj.casual_probability = int(texture_1_movability)
              
     def casual_reasoning_for_object_movability(self): # to be called and used in step
@@ -521,7 +534,6 @@ class SearchAndRescueEnv(gym.Env):
         movability = np.array([1, 1])
         state = 0
         for obj_id, obj in ENV_MANAGER.objects.items():
-            
             if obj.movability == None:
                 movability = np.array([1, 1])# it will set everything to be movable on the truth table
             else:
@@ -549,7 +561,6 @@ class SearchAndRescueEnv(gym.Env):
                     logging.info(f'[METRIC] Causal Graph Created - Number of Interactions Required : {self.causal_interaction_count}') # Evaluation Metric
                     logging.info(f"[METRIC] Minimum Number of Interactions for Movable Objects : {len(self.movability_predictions[1])}")
                     logging.info(f"[METRIC] Minimum Number of Interactions for Immovable Objects : {len(self.movability_predictions[0])}")
-                    
                     movability = np.array([self.movability_dict[0],self.movability_dict[1]])
                     state = 1
                 else:
@@ -610,6 +621,36 @@ class SearchAndRescueEnv(gym.Env):
 
         return collision_info
     
+    def check_collision_with_movable_objects(self):
+        collision_info = {
+            'has_collided': False,
+            'uid': None
+        }
+        # Retrieve all contact points
+        contact_points = p.getContactPoints(bodyA=self.TURTLE)
+        for contact in contact_points:
+            if contact[2] in self.movable_obj_ids:  # contact[2] is the unique ID of the second object in the collision
+                collision_info['has_collided'] = True
+                collision_info['uid'] = contact[2]  # Store the ID of the obj
+                break  # No need to check further if a collision is found
+
+        return collision_info
+    
+    def check_collision_with_immovable_objects(self):
+        collision_info = {
+            'has_collided': False,
+            'uid': None
+        }
+        # Retrieve all contact points
+        contact_points = p.getContactPoints(bodyA=self.TURTLE)
+        for contact in contact_points:
+            if contact[2] in self.immovable_obj_ids:  # contact[2] is the unique ID of the second object in the collision
+                collision_info['has_collided'] = True
+                collision_info['uid'] = contact[2]  # Store the ID of the obj
+                break  # No need to check further if a collision is found
+
+        return collision_info
+    
     def check_collision_with_goal_and_update_state(self,agent_position):
         collision_info = {
             'reached_goal': False
@@ -624,31 +665,37 @@ class SearchAndRescueEnv(gym.Env):
     
     def calculate_scaled_deltas(self, agent_position):
         # Initialize dictionary to store scaled deltas
-        scaled_deltas = {
-            'walls': {},
-            'goal': None,
-            'objects': {}
-        }
+        # scaled_deltas = {
+        #     'walls': {},
+        #     'goal': None,
+        #     'objects': {}
+        # }
+        scaled_goal_delta = []
+        scaled_object_deltas = []
+        scaled_walls_deltas = []
 
         # Calculate scaled deltas for walls
         for wall_id, wall_midpoint in self.wall_midpoints.items():
             delta = [((wall_midpoint[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
-            scaled_deltas['walls'][wall_id] = delta
+            scaled_walls_deltas.append(delta)
 
         # Calculate scaled delta for goal
         goal_delta = [((self.goal_position[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
-        scaled_deltas['goal'] = goal_delta
+        scaled_goal_delta.append(goal_delta)
 
-        # Calculate scaled deltas for objects - use UID of the objects it has seen TODO
-        for object_id, object_position in self.objectPositions.items():  # Assuming this is how you store object positions
-            delta = [((object_position[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
-            scaled_deltas['objects'][object_id] = delta
+        # Create a sorted list of object IDs
+        sorted_object_ids = sorted(self.objectPositions.keys())
+        for object_id in sorted_object_ids:
+            object_position = self.objectPositions[object_id]
+            delta = [(object_position[i] - agent_position[i]) / self.scaling_factor for i in range(3)]
+            scaled_object_deltas.append(delta)
 
-        return scaled_deltas        
-
+        return np.array(scaled_goal_delta),np.array(scaled_object_deltas),np.array(scaled_walls_deltas)    
+    
     def step(self, action):
         self.prev_actions.append(action)
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
+        collision_status = 0
 
         # Check objects vicinity and Then translate actions
         sensing_info = self.start_sensing_module_and_initializing_digital_mind()
@@ -658,39 +705,39 @@ class SearchAndRescueEnv(gym.Env):
         self.previous_position = self.robot_position
         
         self.translate_action(action)
-
+       
+        # # Update the positions
+        # self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
+        # # # Check objects vicinity and Then translate actions
+        # # sensing_info = self.start_sensing_module_and_initializing_digital_mind()
+        # # self.update_moability_in_digital_mind_using_last_action(sensing_info)
+        # # self.casual_reasoning_for_object_movability()
+        
         # Update the positions
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
-        
-        # Check objects vicinity and Then translate actions
-        sensing_info = self.start_sensing_module_and_initializing_digital_mind()
-        self.update_moability_in_digital_mind_using_last_action(sensing_info)
-        self.casual_reasoning_for_object_movability()
-        
-        # Update the positions
-        self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
-        
-        # Update the visitation grid
-        # grid_position = self.discretize_position(self.robot_position)
-        # self.visitation_grid[grid_position] += 1
-        
-        # # Apply a penalty for revisiting the same cell
-        # visit_count = self.visitation_grid[grid_position]
-        # visit_penalty = max(visit_count - 1, 0)  # No penalty for the first visit
-        # penalty_factor = 0.01  
-        # self.reward -= visit_penalty * penalty_factor
-        
         collision_info = self.check_collision_with_walls()
         if collision_info['has_collided']:
             logging.info('[INFO] Has Colided With Wall ')
+            collision_status = 1
             self.reward = -10
             self.done = True  
+
+        obj_collision_info = self.check_collision_with_movable_objects()
+        if obj_collision_info['has_collided']:
+            logging.info(f"[INFO] Has Colided With a Movable object of UID {obj_collision_info['uid']}")
+            collision_status = 2
+            
+        obj_collision_info = self.check_collision_with_immovable_objects()
+        if obj_collision_info['has_collided']:
+            logging.info(f"[INFO] Has Colided With a Immovable object of UID {obj_collision_info['uid']}")
+            collision_status = 3
         
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         # handle collision with goal - Set a high reward and set done to true
         goal_collision_info = self.check_collision_with_goal_and_update_state(self.robot_position)
         if goal_collision_info['reached_goal']:
             logging.info('[INFO] Has Reached Goal ')
+            collision_status = 4
             self.reward = 200
             self.done = True
         
@@ -708,17 +755,30 @@ class SearchAndRescueEnv(gym.Env):
             logging.info(f'[INFO] Episode Ending with Cumlative Reward : {self.cumulative_reward}') # This metric can be used to compare how well the agent performs with and without causal and digital mind
         
         # Compute scaled deltas
-        scaled_deltas = self.calculate_scaled_deltas(self.robot_position)
-        # Flatten scaled_deltas and add them to your observation
-        wall_deltas = [delta for deltas in scaled_deltas['walls'].values() for delta in deltas]  # Flatten wall deltas
-        goal_delta = scaled_deltas['goal']
-        object_deltas = [delta for deltas in scaled_deltas['objects'].values() for delta in deltas]  # Flatten object deltas
-
-        observation = goal_delta + list(self.prev_actions)# + object_deltas #+ wall_deltas + object_deltas #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
-        observation = np.array(observation)
+        goal_delta,objects_delta,walls_delta = self.calculate_scaled_deltas(self.robot_position)
+        
+        # Updating the Texture and Movability for the Obj
+        sorted_object_ids = sorted(self.objectPositions.keys())
+        if sensing_info['is_facing_object']:
+            index = sorted_object_ids.index(sensing_info['obj_id'])
+            for obj_id, obj in ENV_MANAGER.objects.items():
+                self.uid_texture_class_pred[index]=obj.texture_class
+                self.uid_movable_class_pred[index]=obj.casual_probability
+        
+        observation_space = spaces.Dict({
+            'goal_position': goal_delta,
+            'objects_info': {
+                'positions': objects_delta, 
+                'texture_classes':np.array(self.uid_texture_class_pred),  
+                'movable': np.array(self.uid_movable_class_pred)  # use Causal Probability of Movability Here 
+            },
+            'walls_info':walls_delta,
+            'collision_info': collision_status,  # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
+            'previous_actions': np.array(list(self.prev_actions), dtype=np.int32)
+        })
         info = {}
         self.dump_digital_mind_to_json()
-        return observation,self.reward,self.done,info
+        return observation_space,self.reward,self.done,info
     
     def discretize_position(self, position,cell_size=1):
         # Convert a continuous position to a grid cell, assuming position is a tuple (x, y, z)
@@ -832,15 +892,32 @@ class SearchAndRescueEnv(gym.Env):
         logging.info(f'Retained Visual Prediction Knowledge : {self.visual_predictions} \n')
 
         # Compute scaled deltas
-        scaled_deltas = self.calculate_scaled_deltas(self.robot_position)
+        goal_delta,objects_delta,walls_delta = self.calculate_scaled_deltas(self.robot_position)
         # Flatten scaled_deltas and add them to your observation
-        wall_deltas = [delta for deltas in scaled_deltas['walls'].values() for delta in deltas]  # Flatten wall deltas
-        goal_delta = scaled_deltas['goal']
-        object_deltas = [delta for deltas in scaled_deltas['objects'].values() for delta in deltas]  # Flatten object deltas
-
-        observation = goal_delta + list(self.prev_actions) # + wall_deltas + object_deltas #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
-        observation = np.array(observation)
-        return observation
+        # wall_deltas = [delta for deltas in scaled_deltas['walls'].values() for delta in deltas]  # Flatten wall deltas
+        # goal_delta = scaled_deltas['goal']
+        # object_deltas = [delta for deltas in scaled_deltas['objects'].values() for delta in deltas]  # Flatten object deltas
+        self.uid_texture_class_pred = []
+        self.uid_movable_class_pred = []
+        for object_id, object_position in self.objectPositions.items(): 
+            self.uid_texture_class_pred.append(-1)
+            self.uid_movable_class_pred.append(-1)
+        
+        observation_space = spaces.Dict({
+            'goal_position': goal_delta,
+            'objects_info': {
+                'positions': objects_delta, 
+                'texture_classes':np.array(self.uid_texture_class_pred),  
+                'movable': np.array(self.uid_movable_class_pred)  # use Causal Probability of Movability Here 
+            },
+            'walls_info':walls_delta,
+            'collision_info': 0,  # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
+            'previous_actions': np.array(list(self.prev_actions), dtype=np.int32)
+        })
+        
+        # observation = goal_delta + list(self.prev_actions) # + wall_deltas + object_deltas #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
+        # observation = np.array(observation)
+        return observation_space
 
     def render(self):
         pass # handled by pybullet
