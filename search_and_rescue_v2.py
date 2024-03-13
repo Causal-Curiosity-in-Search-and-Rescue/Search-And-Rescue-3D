@@ -22,7 +22,7 @@ from stable_baselines3 import PPO
 from digital_mind import EnvironmentObjectsManager
 from preprocessing import normalise_textures,get_texture_features
 from helpers import distance_3d,calculate_vector,calculate_cos_angle,quaternion_to_forward_vector,generate_maze_with_objects,visualisemaze
-from SRpolicy import CustomActorCriticPolicy,CustomFeatureExtractor
+from SRpolicy import CustomPolicy
 import pickle
 import pdb
 
@@ -758,13 +758,15 @@ class SearchAndRescueEnv(gym.Env):
         
         # Updating the Texture and Movability for the Obj
         sorted_object_ids = sorted(self.objectPositions.keys())
-        if sensing_info['is_facing_object']:
-            index = sorted_object_ids.index(sensing_info['obj_id'])
-            for obj_id, obj in ENV_MANAGER.objects.items():
-                if obj.id == sensing_info['obj_id']:
-                    if obj.texture_class != None:
-                        self.uid_texture_class_pred[index]=obj.texture_class + 1
-                        self.uid_movable_class_pred[index]=obj.casual_probability + 1
+        for idx in range(len(sensing_info)):
+            info = sensing_info[idx]
+            if info['is_facing_object']:
+                index = sorted_object_ids.index(info['obj_id'])
+                for obj_id, obj in ENV_MANAGER.objects.items():
+                    if obj.id == info['obj_id']:
+                        if obj.texture_class != None:
+                            self.uid_texture_class_pred[index]=obj.texture_class + 1
+                            self.uid_movable_class_pred[index]=obj.casual_probability + 1
         
         observation_space = {
             'goal_position': goal_delta,
@@ -943,7 +945,7 @@ env = SearchAndRescueEnv()
 env.reset()
 done = False
 
-model = PPO(CustomActorCriticPolicy, env, verbose=1, policy_kwargs={"features_extractor_class": CustomFeatureExtractor})
+model = PPO(CustomPolicy, env, verbose=1)
 logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
 
 TIMESTEPS = 10000
