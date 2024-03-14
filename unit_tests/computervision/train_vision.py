@@ -42,6 +42,6 @@ clf.fit(X_train, y_train)
 y_pred = clf.predict(X_val)
 print("Classification Report:\n", classification_report(y_val, y_pred))
 
-# Saving the  Model
-dump(clf,'resources/models/unsup_txture_clsf_rf.joblib')
-dump(scaler,'resources/models/unsup_txture_clsf_scaler.joblib')
+# # Saving the  Model
+# dump(clf,'resources/models/unsup_txture_clsf_rf.joblib')
+# dump(scaler,'resources/models/unsup_txture_clsf_scaler.joblib')

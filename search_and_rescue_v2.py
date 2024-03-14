@@ -40,13 +40,13 @@ SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 ENV_MANAGER = EnvironmentObjectsManager()
 
 # Define How Long the Robot should be Operational in the Environment
-AGENT_ACTION_LEN = 1000
+AGENT_ACTION_LEN = 10
 p.connect(p.GUI)
 
 height = 20
 width = 20
-num_m = 9 # Movable
-num_i = 11 # Immovable
+num_m = 5 # Movable
+num_i = 6 # Immovable
 num_s = 1 # Start Positions
 n_texture_classes = 2
 n_objects = num_m + 1 + num_i
@@ -950,19 +950,15 @@ env.reset()
 done = False
 
 model = PPO("MultiInputPolicy", env, verbose=1)
-# model = PPO(CustomPolicy, env, verbose=1, learning_rate=2.5e-4, n_steps=2048,
-#             batch_size=64, n_epochs=10, gamma=0.99, gae_lambda=0.95,
-#             clip_range=0.2, ent_coef=0.01, vf_coef=0.5,
-#             max_grad_norm=0.5, use_sde=True, sde_sample_freq=4)
 logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
 
 TIMESTEPS = 10000
-iters = 0
-while iters < 10:
-    iters += 1
-    print(f"[INFO] TimeStep: ({iters}/{TIMESTEPS})")
-    model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
-    model.save("ppo_learned")
+# iters = 0
+# while iters < 10:
+# iters += 1
+# print(f"[INFO] TimeStep: ({iters}/{TIMESTEPS})")
+model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
+model.save("ppo_learned")
 
 # UNIT-TEST
 # try:
