@@ -23,6 +23,10 @@ from digital_mind import EnvironmentObjectsManager
 from preprocessing import normalise_textures,get_texture_features
 from helpers import distance_3d,calculate_vector,calculate_cos_angle,quaternion_to_forward_vector,generate_maze_with_objects,visualisemaze
 import pickle
+import optuna 
+from stable_baselines3.common.evaluation import evaluate_policy
+from gym.envs.registration import register
+import wandb
 import pdb
 
 # LOAD THE URDF FILES AND TEXTURES
@@ -969,33 +973,51 @@ class SearchAndRescueEnv(gym.Env):
 
     def seed(self, seed=None):  
         pass # Not Needed
+
+def objective(trial):
+    run = wandb.init(project="[GDP] Search&Rescue-3D", entity="juliangeralddcruz", reinit=True)
+    learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-3)
+    ent_coef = trial.suggest_loguniform('ent_coef', 0.0001, 0.1)
+    TIMESTEPS =1000
     
+    config = {
+        "learning_rate":learning_rate,
+        "ent_coef":ent_coef,
+        "timesteps":TIMESTEPS
+    }
+    
+    wandb.init(
+        config=config,
+        project="[GDP] Search&Rescue-3D",
+        monitor_gym=True,       # automatically upload gym environements' videos
+        save_code=True,
+    )
 
-# TRAINING the RL 
-models_dir = f"models/{int(time.time())}/"
-logdir = f"logs/{int(time.time())}/"
+    # TRAINING the RL 
+    models_dir = f"models/{int(time.time())}/"
+    logdir = f"logs/{int(time.time())}/"
 
-if not os.path.exists(models_dir):
-    os.makedirs(models_dir)
+    if not os.path.exists(models_dir):
+        os.makedirs(models_dir)
 
-if not os.path.exists(logdir):
-    os.makedirs(logdir)
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
 
-env = SearchAndRescueEnv()
-# Then, sprinkle logging statements in your code:
-env.reset()
-done = False
+    env = SearchAndRescueEnv()
+    env.reset()
 
-model = A2C("MultiInputPolicy", env, verbose=1)
-logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
+    model = A2C("MultiInputPolicy", env,learning_rate=learning_rate, ent_coef=ent_coef, verbose=1)
+    logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
 
-TIMESTEPS =1000
-# iters = 0
-# while iters < 10:
-# iters += 1
-# print(f"[INFO] TimeStep: ({iters}/{TIMESTEPS})")
-model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"A2C")
-model.save("a2c_learned")
+    mean_reward, _ = evaluate_policy(model, env, n_eval_emean_rewardpisodes=10)
+    wandb.log({"mean_reward": mean_reward})
+    model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"A2C")
+    model.save(f"a2c_{trial}_{mean_reward}")
+    run.finish()
+    return mean_reward
+
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=50)
 
 # UNIT-TEST
 # try:
