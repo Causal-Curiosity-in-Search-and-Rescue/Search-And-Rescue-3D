@@ -44,17 +44,17 @@ SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 ENV_MANAGER = EnvironmentObjectsManager()
 
 # Define How Long the Robot should be Operational in the Environment
-AGENT_ACTION_LEN = 5
+AGENT_ACTION_LEN = 20
 p.connect(p.GUI)
 # p.connect(p.DIRECT)
 
 height = 20
 width = 20
-num_m = 2 # Movable
-num_i = 3 # Immovable
+num_m = 1 # Movable
+num_i = 20 # Immovable
 num_s = 1 # Start Positions
 n_texture_classes = 2
-n_objects = num_m + 1 + num_i
+n_objects = num_m + 2 + num_i
 # MAP1 = [
 #     ['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w'],
 #     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
@@ -100,14 +100,13 @@ class SearchAndRescueEnv(gym.Env):
         self.action_space = spaces.Discrete(3)  # Forward, Left, Right
         # Define the observation space
         self.observation_space = spaces.Dict({
-            'goal_position': spaces.Box(low=np.array([-np.inf, -np.inf, -np.inf]), high=np.array([np.inf, np.inf, np.inf]), dtype=np.float32),
-            'object_positions': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 3), dtype=np.float32),
-            'object_textures': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming texture classes are integers
-            'object_movables': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming movable flags are integers
-            'walls_info': spaces.Box(low=-np.inf, high=np.inf, shape=(4, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z) 76
-            'rooms_info': spaces.Box(low=-np.inf, high=np.inf, shape=(4, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z) 15
-            'collision_info': spaces.Discrete(6),  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
-            'previous_actions': spaces.Box(low=-1.0, high=2.0, shape=(AGENT_ACTION_LEN,), dtype=np.float32)
+            'positional_data': spaces.Box(low=np.inf, high=np.inf, shape=(6+AGENT_ACTION_LEN,), dtype=np.float32),
+            'object_data': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 5), dtype=np.float32),
+            # 'object_textures': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming texture classes are integers
+            # 'object_movables': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming movable flags are integers
+            # 'walls_info': spaces.Box(low=-np.inf, high=np.inf, shape=(4, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z) 76
+            # 'rooms_info': spaces.Box(low=-np.inf, high=np.inf, shape=(4, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z) 15
+            'collision_info': spaces.Discrete(6)  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
         })
         # self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(3+AGENT_ACTION_LEN,), dtype=np.float32)
         
@@ -195,7 +194,7 @@ class SearchAndRescueEnv(gym.Env):
 
         self.environment_midpoint = (height / 2, width / 2, 1)
         
-        self.scaling_factor = self.calculate_full_length_scaling() # Will Experiment with global or local
+        self.scaling_factor = self.calculate_half_length_scaling() # Will Experiment with global or local
         
     def calculate_half_length_scaling(self):
         """
@@ -544,8 +543,6 @@ class SearchAndRescueEnv(gym.Env):
             
             if obj.id == 1:
                 obj.movability = self.control_movability_update(1)
-    
-    
 
     def store_causal_probability(self,df):
         texture_0_movability = df[df['Texture'] == 0]['Movability_1'].iloc[0]
@@ -726,24 +723,23 @@ class SearchAndRescueEnv(gym.Env):
         for wall_id, wall_midpoint in self.wall_midpoints.items():
         # for _wall_id  in self.wall_ids:
             # _wall_pos,_ = p.getBasePositionAndOrientation(wall_id)
-            delta = [((wall_midpoint[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
+            delta = [((wall_midpoint[i] - agent_position[i])) for i in range(3)]  # 3D delta
             scaled_walls_deltas.append(delta)
         
         for room_id, room_midpoint in self.room_wall_midpoints.items():  
         # for _room_id  in self.room_ids:
             # _wall_pos,_ = p.getBasePositionAndOrientation(_room_id)
-            delta = [((room_midpoint[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
+            delta = [((room_midpoint[i] - agent_position[i]) ) for i in range(3)]  # 3D delta
             scaled_room_deltas.append(delta)
 
         # Calculate scaled delta for goal
-        goal_delta = [((self.goal_position[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
-        scaled_goal_delta.append(goal_delta)
+        goal_delta = [((self.goal_position[i] - agent_position[i])) for i in range(3)]  # 3D delta
 
         # Create a sorted list of object IDs
         sorted_object_ids = sorted(self.objectPositions.keys())
         for object_id in sorted_object_ids:
             object_position = self.objectPositions[object_id]
-            delta = [(object_position[i] - agent_position[i]) / self.scaling_factor for i in range(3)]
+            delta = [(object_position[i] - agent_position[i])  for i in range(3)]
             scaled_object_deltas.append(delta)
 
         return np.array(scaled_goal_delta),np.array(scaled_object_deltas),np.array(scaled_walls_deltas) , np.array(scaled_room_deltas)   
@@ -762,20 +758,13 @@ class SearchAndRescueEnv(gym.Env):
         
         self.translate_action(action)
        
-        # # Update the positions
-        # self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
-        # # # Check objects vicinity and Then translate actions
-        # # sensing_info = self.start_sensing_module_and_initializing_digital_mind()
-        # # self.update_moability_in_digital_mind_using_last_action(sensing_info)
-        # # self.casual_reasoning_for_object_movability()
-        
         # Update the positions
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         collision_info = self.check_collision_with_walls()
         if collision_info['has_collided']:
             logging.info('[INFO] Has Colided With Wall ')
             collision_status = 1
-            self.reward = -5
+            self.reward = -1
             self.done = True  
             
         # Update the positions
@@ -784,8 +773,8 @@ class SearchAndRescueEnv(gym.Env):
         if collision_info['has_collided']:
             logging.info('[INFO] Has Colided With Rooms ')
             collision_status = 2
-            self.reward += 20
-            self.done = True 
+            self.reward = 20
+            # self.done = True 
 
         obj_collision_info = self.check_collision_with_movable_objects()
         if obj_collision_info['has_collided']:
@@ -835,14 +824,9 @@ class SearchAndRescueEnv(gym.Env):
                             self.uid_movable_class_pred[index]=obj.casual_probability + 1
         
         observation_space = {
-            'goal_position': goal_delta,
-            'object_positions': objects_delta,
-            'object_textures':np.array(self.uid_texture_class_pred),
-            'object_movables':np.array(self.uid_movable_class_pred), 
-            'walls_info':walls_delta,
-            'rooms_info':rooms_delta,
+            'positional_data': self.robot_position + self.goal_position + list(self.prev_actions),
+            'objects_data': objects_delta,
             'collision_info': collision_status, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
-            'previous_actions': np.array(list(self.prev_actions), dtype=np.int32)
         }
         info = {}
         self.dump_digital_mind_to_json()
@@ -948,7 +932,7 @@ class SearchAndRescueEnv(gym.Env):
         
         self.prev_actions = deque(maxlen=AGENT_ACTION_LEN)
         for i in range(AGENT_ACTION_LEN):
-            self.prev_actions.append(4) # Creates the History 
+            self.prev_actions.append(100) # Creates the History 
         
         # The initial Representation of the environment has to be created here 
         self.start_sensing_module_and_initializing_digital_mind()
@@ -973,12 +957,12 @@ class SearchAndRescueEnv(gym.Env):
             self.uid_movable_class_pred.append(0)
         
         observation_space = {
+            'positional_data': self.robot_position + self.goal_position + list(self.prev_actions),
             'goal_position': goal_delta,
-            'object_positions': objects_delta,
             'object_textures':np.array(self.uid_texture_class_pred),
             'object_movables':np.array(self.uid_movable_class_pred),
-            'walls_info':walls_delta,
-            'rooms_info':rooms_delta,
+            # 'walls_info':walls_delta,
+            # 'rooms_info':rooms_delta,
             'collision_info': 0,  # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
             'previous_actions': np.array(list(self.prev_actions), dtype=np.int32)
         }
@@ -1076,7 +1060,7 @@ class SearchAndRescueEnv(gym.Env):
 # study.optimize(objective, n_trials=50)
 
 
-TIMESTEPS =5000
+TIMESTEPS =10000
 run = wandb.init(project="[GDP] Search&Rescue-3D", entity="juliangeralddcruz", reinit=True)
 wandb.init(
         project="[GDP] Search&Rescue-3D",
