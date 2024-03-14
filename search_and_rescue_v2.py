@@ -41,7 +41,7 @@ ENV_MANAGER = EnvironmentObjectsManager()
 # Define How Long the Robot should be Operational in the Environment
 AGENT_ACTION_LEN = 30
 # p.connect(p.GUI)
-p.connect()
+p.connect(p.DIRECT)
 
 height = 20
 width = 20
