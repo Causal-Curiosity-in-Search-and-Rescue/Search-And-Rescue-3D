@@ -103,8 +103,8 @@ class SearchAndRescueEnv(gym.Env):
             'object_positions': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 3), dtype=np.float32),
             'object_textures': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming texture classes are integers
             'object_movables': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming movable flags are integers
-            'walls_info': spaces.Box(low=-np.inf, high=np.inf, shape=(76, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z)
-            'rooms_info': spaces.Box(low=-np.inf, high=np.inf, shape=(15, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z)
+            'walls_info': spaces.Box(low=-np.inf, high=np.inf, shape=(4, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z) 76
+            'rooms_info': spaces.Box(low=-np.inf, high=np.inf, shape=(4, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z) 15
             'collision_info': spaces.Discrete(6),  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
             'previous_actions': spaces.Box(low=-1.0, high=2.0, shape=(AGENT_ACTION_LEN,), dtype=np.float32)
         })
@@ -151,7 +151,8 @@ class SearchAndRescueEnv(gym.Env):
 
         wallsIdCollision = p.createCollisionShape(p.GEOM_BOX,
                                                   halfExtents=[boxHalfLength, boxHalfWidth, boxHalfHeight])
-
+        
+        self.room_wall_positions = {'north': [], 'south': [], 'east': [], 'west': []}
         for i in range(0, height):
             for j in range(0, width):
                 if map_plan[i][j] == "w":
@@ -168,6 +169,23 @@ class SearchAndRescueEnv(gym.Env):
                                       basePosition=[i, j, 1],
                                       )
                     self.room_ids.append(room_id)
+                    # Determine the direction of the wall and add to room_wall_positions
+                    if i == 0 or i < height / 2:  # Assuming 'north' is towards the top of the map
+                        self.room_wall_positions['north'].append((i, j))
+                    if i == height - 1 or i >= height / 2:  # 'south'
+                        self.room_wall_positions['south'].append((i, j))
+                    if j == 0 or j < width / 2:  # 'west'
+                        self.room_wall_positions['west'].append((i, j))
+                    if j == width - 1 or j >= width / 2:  # 'east'
+                        self.room_wall_positions['east'].append((i, j))
+                    
+        # Calculate midpoints for internal rooms
+        self.room_wall_midpoints = {}
+        for direction, positions in self.room_wall_positions.items():
+            if positions:  # Check if there are any room walls in this direction
+                avg_x = sum(pos[0] for pos in positions) / len(positions)
+                avg_y = sum(pos[1] for pos in positions) / len(positions)
+                self.room_wall_midpoints[direction] = (avg_x, avg_y, 1)  # Assuming walls are all at height 1
                     
         # Get Midpoint of the Walls for each direction and the midpoint of the environment
         self.wall_midpoints = {'north': (height / 2, width - 1, 1), 'south': (height / 2, 0, 1), 
@@ -703,15 +721,16 @@ class SearchAndRescueEnv(gym.Env):
         scaled_room_deltas = []
 
         # Calculate scaled deltas for walls
-        # for wall_id, wall_midpoint in self.wall_midpoints.items():
-        for _wall_id  in self.wall_ids:
-            _wall_pos,_ = p.getBasePositionAndOrientation(_wall_id)
-            delta = [((_wall_pos[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
+        for wall_id, wall_midpoint in self.wall_midpoints.items():
+        # for _wall_id  in self.wall_ids:
+            # _wall_pos,_ = p.getBasePositionAndOrientation(wall_id)
+            delta = [((wall_midpoint[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
             scaled_walls_deltas.append(delta)
-            
-        for _room_id  in self.room_ids:
-            _wall_pos,_ = p.getBasePositionAndOrientation(_room_id)
-            delta = [((_wall_pos[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
+        
+        for room_id, room_midpoint in self.room_wall_midpoints.items():  
+        # for _room_id  in self.room_ids:
+            # _wall_pos,_ = p.getBasePositionAndOrientation(_room_id)
+            delta = [((room_midpoint[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
             scaled_room_deltas.append(delta)
 
         # Calculate scaled delta for goal
