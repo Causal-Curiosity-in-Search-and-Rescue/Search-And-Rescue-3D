@@ -17,7 +17,7 @@ from causalnex.plots import plot_structure, NODE_STYLE, EDGE_STYLE
 from causalnex.network import BayesianNetwork
 from causalnex.structure.notears import from_pandas_lasso
 import pandas as pd 
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO,A2C
 # Custom imports
 from digital_mind import EnvironmentObjectsManager
 from preprocessing import normalise_textures,get_texture_features
@@ -948,7 +948,7 @@ env = SearchAndRescueEnv()
 env.reset()
 done = False
 
-model = PPO("MultiInputPolicy", env, verbose=1)
+model = A2C("MultiInputPolicy", env, verbose=1)
 logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
 
 TIMESTEPS = 10000
@@ -956,8 +956,8 @@ TIMESTEPS = 10000
 # while iters < 10:
 # iters += 1
 # print(f"[INFO] TimeStep: ({iters}/{TIMESTEPS})")
-model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
-model.save("ppo_learned")
+model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"A2C")
+model.save("a2c_learned")
 
 # UNIT-TEST
 # try:
