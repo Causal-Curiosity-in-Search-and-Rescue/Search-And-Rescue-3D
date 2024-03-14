@@ -99,8 +99,8 @@ class SearchAndRescueEnv(gym.Env):
             'object_positions': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 3), dtype=np.float32),
             'object_textures': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming texture classes are integers
             'object_movables': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming movable flags are integers
-            'walls_info': spaces.Box(low=-np.inf, high=np.inf, shape=(91, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z)
-            'rooms_info': spaces.Box(low=-np.inf, high=np.inf, shape=(91, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z)
+            'walls_info': spaces.Box(low=-np.inf, high=np.inf, shape=(76, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z)
+            'rooms_info': spaces.Box(low=-np.inf, high=np.inf, shape=(15, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z)
             'collision_info': spaces.Discrete(6),  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
             'previous_actions': spaces.Box(low=-1.0, high=2.0, shape=(AGENT_ACTION_LEN,), dtype=np.float32)
         })
