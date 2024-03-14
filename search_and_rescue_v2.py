@@ -22,7 +22,6 @@ from stable_baselines3 import PPO
 from digital_mind import EnvironmentObjectsManager
 from preprocessing import normalise_textures,get_texture_features
 from helpers import distance_3d,calculate_vector,calculate_cos_angle,quaternion_to_forward_vector,generate_maze_with_objects,visualisemaze
-from SRpolicy import CustomPolicy
 import pickle
 import pdb
 
