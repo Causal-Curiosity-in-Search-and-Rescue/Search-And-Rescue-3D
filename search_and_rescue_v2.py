@@ -31,7 +31,7 @@ BASE_PATH = os.path.join(os.getcwd(),"resources")
 # LOAD COMPUTERVISION MODELS
 CV_MODEL = load(f"{BASE_PATH}/models/unsup_txture_clsf_rf.joblib")
 CV_SCALER = load(f"{BASE_PATH}/models/unsup_txture_clsf_scaler.joblib")
-CV_THRESHOLD = 0.7
+CV_THRESHOLD = 0.5
 MOVABILITY_THRESHOLD = 0.7
 SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 
@@ -39,13 +39,13 @@ SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 ENV_MANAGER = EnvironmentObjectsManager()
 
 # Define How Long the Robot should be Operational in the Environment
-AGENT_ACTION_LEN = 10
+AGENT_ACTION_LEN = 30
 p.connect(p.GUI)
 
 height = 20
 width = 20
 num_m = 5 # Movable
-num_i = 6 # Immovable
+num_i = 21 # Immovable
 num_s = 1 # Start Positions
 n_texture_classes = 2
 n_objects = num_m + 1 + num_i
@@ -98,7 +98,7 @@ class SearchAndRescueEnv(gym.Env):
             'object_positions': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 3), dtype=np.float32),
             'object_textures': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming texture classes are integers
             'object_movables': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming movable flags are integers
-            'walls_info': spaces.Box(low=-np.inf, high=np.inf, shape=(4, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z)
+            'walls_info': spaces.Box(low=-np.inf, high=np.inf, shape=(91, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z)
             'collision_info': spaces.Discrete(5),  # 0: No collision, 1: Collided with wall, 2: Collided with immovable, 3: Collided with movable, 4: collision with goal
             'previous_actions': spaces.Box(low=-1.0, high=2.0, shape=(AGENT_ACTION_LEN,), dtype=np.float32)
         })
@@ -169,7 +169,7 @@ class SearchAndRescueEnv(gym.Env):
 
         self.environment_midpoint = (height / 2, width / 2, 1)
         
-        self.scaling_factor = self.calculate_half_length_scaling() # Will Experiment with global or local
+        self.scaling_factor = self.calculate_full_length_scaling() # Will Experiment with global or local
         
     def calculate_half_length_scaling(self):
         """
@@ -385,11 +385,12 @@ class SearchAndRescueEnv(gym.Env):
                     current_visual_prediction = 0
                 sorted_obj_id = self.sort_obj_ids_truth(uid)
                 thresholded_prediction = self.apply_thresholding(sorted_obj_id,current_visual_prediction)
+                # thresholded_prediction = current_visual_prediction
                 classified_image = "Cracked" if (thresholded_prediction == 1) else "Grooved"
                 print(f'[INFO] Classified Texture Class : {classified_image} - UID : {uid} - Position : {pos} -  {thresholded_prediction} - {distance} - {cos_angle}')
                 
                 #On getting close to object for inspection, get the predicted class
-                if distance<=1.5 and cos_angle < -0.40: # Robot is facing the object 
+                if distance<=1.8 and cos_angle < -0.50: # Robot is facing the object 
                     # Updated Vision Texture Classification 
                     thresholded_prediction = self.apply_thresholding(sorted_obj_id,current_visual_prediction)
                     sensing_info.append(
@@ -433,7 +434,7 @@ class SearchAndRescueEnv(gym.Env):
         # print(f'[DEBUG] Length of Current Visual Predictions for {uid} then {len(self.visual_predictions[uid])}')
         prediction_prob = np.mean(self.visual_predictions[uid])
         # print(f"[DEBUG] Mean of visual Predictions for {uid} then {prediction_prob}")
-        if len(self.visual_predictions[uid]) > 4:
+        if len(self.visual_predictions[uid]) > 1:
             logging.info(f"[DEBUG] Mean of visual Predictions for {uid} then {prediction_prob}")
             if prediction_prob > CV_THRESHOLD:
                 return 1
@@ -471,7 +472,7 @@ class SearchAndRescueEnv(gym.Env):
             dot_product = np.dot(norm_obj_vector, norm_robot_vector)
 
             # Check if the movement direction is similar (dot product close to 1)
-            if dot_product > 0.5:  # Adjust this value based on how strict you want this check to be
+            if dot_product > 0.1:  # Adjust this value based on how strict you want this check to be
                 aligned_movement = True
 
         # The object is considered moved due to the robot if it moved significantly and in alignment with the robot's movement
@@ -677,8 +678,11 @@ class SearchAndRescueEnv(gym.Env):
         scaled_walls_deltas = []
 
         # Calculate scaled deltas for walls
-        for wall_id, wall_midpoint in self.wall_midpoints.items():
-            delta = [((wall_midpoint[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
+        # for wall_id, wall_midpoint in self.wall_midpoints.items():
+        concat_wall_id = self.wall_ids + self.room_ids
+        for _wall_id  in concat_wall_id:
+            _wall_pos,_ = p.getBasePositionAndOrientation(_wall_id)
+            delta = [((_wall_pos[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
             scaled_walls_deltas.append(delta)
 
         # Calculate scaled delta for goal
@@ -780,7 +784,6 @@ class SearchAndRescueEnv(gym.Env):
             'collision_info': collision_status,  # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
             'previous_actions': np.array(list(self.prev_actions), dtype=np.int32)
         }
-        print('in Step : ',observation_space)
         info = {}
         self.dump_digital_mind_to_json()
         return observation_space,self.reward,self.done,info
@@ -917,7 +920,6 @@ class SearchAndRescueEnv(gym.Env):
             'collision_info': 0,  # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
             'previous_actions': np.array(list(self.prev_actions), dtype=np.int32)
         }
-        print('in Reset ',observation_space)
         
         # observation = goal_delta + list(self.prev_actions) # + wall_deltas + object_deltas #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
         # observation = np.array(observation)
@@ -951,7 +953,7 @@ done = False
 model = A2C("MultiInputPolicy", env, verbose=1)
 logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
 
-TIMESTEPS = 10000
+TIMESTEPS = 20000
 # iters = 0
 # while iters < 10:
 # iters += 1
