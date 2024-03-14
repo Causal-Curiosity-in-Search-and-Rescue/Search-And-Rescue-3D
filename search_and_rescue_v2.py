@@ -28,6 +28,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from gym.envs.registration import register
 import wandb
 import pdb
+# import cv2
 
 # LOAD THE URDF FILES AND TEXTURES
 BASE_PATH = os.path.join(os.getcwd(),"resources")
@@ -35,7 +36,7 @@ BASE_PATH = os.path.join(os.getcwd(),"resources")
 # LOAD COMPUTERVISION MODELS
 CV_MODEL = load(f"{BASE_PATH}/models/unsup_txture_clsf_rf.joblib")
 CV_SCALER = load(f"{BASE_PATH}/models/unsup_txture_clsf_scaler.joblib")
-CV_THRESHOLD = 0.8
+CV_THRESHOLD = 0.7
 MOVABILITY_THRESHOLD = 0.7
 SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 
@@ -43,14 +44,14 @@ SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 ENV_MANAGER = EnvironmentObjectsManager()
 
 # Define How Long the Robot should be Operational in the Environment
-AGENT_ACTION_LEN = 30
+AGENT_ACTION_LEN = 5
 p.connect(p.GUI)
 # p.connect(p.DIRECT)
 
 height = 20
 width = 20
-num_m = 5 # Movable
-num_i = 21 # Immovable
+num_m = 2 # Movable
+num_i = 3 # Immovable
 num_s = 1 # Start Positions
 n_texture_classes = 2
 n_objects = num_m + 1 + num_i
@@ -119,6 +120,7 @@ class SearchAndRescueEnv(gym.Env):
         for objectID in sorted_obj_ids:
             self.movability_predictions[objectID] = []
             self.causal_probablity_dict[objectID] = 0 # Set 0 for default and do + for the actual 
+        
     
     def create_walls(self,map_plan):
         # define ground
@@ -496,7 +498,7 @@ class SearchAndRescueEnv(gym.Env):
             dot_product = np.dot(norm_obj_vector, norm_robot_vector)
 
             # Check if the movement direction is similar (dot product close to 1)
-            if dot_product > 0.1:  # Adjust this value based on how strict you want this check to be
+            if dot_product > 0.5:  # Adjust this value based on how strict you want this check to be
                 aligned_movement = True
 
         # The object is considered moved due to the robot if it moved significantly and in alignment with the robot's movement
@@ -773,7 +775,7 @@ class SearchAndRescueEnv(gym.Env):
         if collision_info['has_collided']:
             logging.info('[INFO] Has Colided With Wall ')
             collision_status = 1
-            self.reward = -10
+            self.reward = -5
             self.done = True  
             
         # Update the positions
@@ -782,7 +784,7 @@ class SearchAndRescueEnv(gym.Env):
         if collision_info['has_collided']:
             logging.info('[INFO] Has Colided With Rooms ')
             collision_status = 2
-            self.reward = 5
+            self.reward += 20
             self.done = True 
 
         obj_collision_info = self.check_collision_with_movable_objects()
@@ -839,7 +841,7 @@ class SearchAndRescueEnv(gym.Env):
             'object_movables':np.array(self.uid_movable_class_pred), 
             'walls_info':walls_delta,
             'rooms_info':rooms_delta,
-            'collision_info': collision_status,  # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
+            'collision_info': collision_status, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
             'previous_actions': np.array(list(self.prev_actions), dtype=np.int32)
         }
         info = {}
@@ -935,6 +937,7 @@ class SearchAndRescueEnv(gym.Env):
         sorted_obj_ids = [0,1]
         for objectID in sorted_obj_ids:
             self.visual_predictions[objectID] = []
+        self.frames=[]
         # self.visitation_grid = np.zeros((height,width), dtype=int) 
         
         # Evaluation Init
@@ -945,7 +948,7 @@ class SearchAndRescueEnv(gym.Env):
         
         self.prev_actions = deque(maxlen=AGENT_ACTION_LEN)
         for i in range(AGENT_ACTION_LEN):
-            self.prev_actions.append(-1) # Creates the History 
+            self.prev_actions.append(4) # Creates the History 
         
         # The initial Representation of the environment has to be created here 
         self.start_sensing_module_and_initializing_digital_mind()
@@ -984,59 +987,123 @@ class SearchAndRescueEnv(gym.Env):
         # observation = np.array(observation)
         return observation_space
 
-    def render(self):
-        pass # handled by pybullet
+    def render(self, mode='human'):
+        # if mode == 'rgb_array':
+        #     # Get the view matrix from the current camera settings.
+        #     view_matrix = p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[self.robot_position[0], self.robot_position[1], 0.5],
+        #                                                       distance=5.0,
+        #                                                       yaw=30,
+        #                                                       pitch=-30,
+        #                                                       roll=0,
+        #                                                       upAxisIndex=2)
+        #     # Set up the projection matrix.
+        #     proj_matrix = p.computeProjectionMatrixFOV(fov=60, aspect=float(960) / 720, nearVal=0.1, farVal=100.0)
+        #     # Generate the image using the view and projection matrices.
+        #     (_, _, px, _, _) = p.getCameraImage(width=960, height=720, viewMatrix=view_matrix,
+        #                                        projectionMatrix=proj_matrix, renderer=p.ER_BULLET_HARDWARE_OPENGL)
+            
+        #     rgb_array = np.array(px, dtype=np.uint8)
+        #     rgb_array = np.reshape(rgb_array, (720, 960, 4))
 
+        #     self.frames.append(rgb_array)  # Assuming self.frames is initialized in __init__
+
+        #     return rgb_array
+        # elif mode == 'human':
+        #     # Implement human mode rendering if necessary
+        pass
+    
     def close(self):
-        p.disconnect()
+        # # Convert frames to video
+        # if len(self.frames) > 0:
+        #     height, width, layers = self.frames[0].shape
+        #     video_codec = cv2.VideoWriter_fourcc(*'XVID')
+        #     video = cv2.VideoWriter('episode_video.avi', video_codec, frameRate=30.0, frameSize=(width,height))
 
+        #     for frame in self.frames:
+        #         video.write(frame)
+
+        #     cv2.destroyAllWindows()
+        #     video.release()
+
+        p.disconnect()
+    
     def seed(self, seed=None):  
         pass # Not Needed
 
-def objective(trial):
-    run = wandb.init(project="[GDP] Search&Rescue-3D", entity="juliangeralddcruz", reinit=True)
-    learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-3)
-    ent_coef = trial.suggest_loguniform('ent_coef', 0.001, 0.1)
-    TIMESTEPS =1000
+# def objective(trial):
+#     run = wandb.init(project="[GDP] Search&Rescue-3D", entity="juliangeralddcruz", reinit=True)
+#     learning_rate = trial.suggest_loguniform('learning_rate', 1e-4, 1e-3)
+#     ent_coef = trial.suggest_loguniform('ent_coef', 0.001, 0.1)
+#     TIMESTEPS =5000
     
-    config = {
-        "learning_rate":learning_rate,
-        "ent_coef":ent_coef,
-        "timesteps":TIMESTEPS
-    }
+#     config = {
+#         "learning_rate":learning_rate,
+#         "ent_coef":ent_coef,
+#         "timesteps":TIMESTEPS
+#     }
     
-    wandb.init(
-        config=config,
+#     wandb.init(
+#         config=config,
+#         project="[GDP] Search&Rescue-3D",
+#         monitor_gym=True,       # automatically upload gym environements' videos
+#         save_code=True,
+#     )
+
+#     # TRAINING the RL 
+#     models_dir = f"models/{int(time.time())}/"
+#     logdir = f"logs/{int(time.time())}/"
+
+#     if not os.path.exists(models_dir):
+#         os.makedirs(models_dir)
+
+#     if not os.path.exists(logdir):
+#         os.makedirs(logdir)
+
+#     env = SearchAndRescueEnv()
+#     env.reset()
+
+#     model = PPO("MultiInputPolicy", env,learning_rate=learning_rate, ent_coef=ent_coef, verbose=1)
+#     logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
+
+#     mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=10)
+#     wandb.log({"mean_reward": mean_reward})
+#     model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"A2C")
+#     model.save(f"ppo_{mean_reward}")
+#     run.finish()
+#     return mean_reward
+
+# study = optuna.create_study(direction='maximize')
+# study.optimize(objective, n_trials=50)
+
+
+TIMESTEPS =5000
+run = wandb.init(project="[GDP] Search&Rescue-3D", entity="juliangeralddcruz", reinit=True)
+wandb.init(
         project="[GDP] Search&Rescue-3D",
         monitor_gym=True,       # automatically upload gym environements' videos
         save_code=True,
     )
+# TRAINING the RL 
+models_dir = f"models/{int(time.time())}/"
+logdir = f"logs/{int(time.time())}/"
 
-    # TRAINING the RL 
-    models_dir = f"models/{int(time.time())}/"
-    logdir = f"logs/{int(time.time())}/"
+if not os.path.exists(models_dir):
+    os.makedirs(models_dir)
 
-    if not os.path.exists(models_dir):
-        os.makedirs(models_dir)
+if not os.path.exists(logdir):
+    os.makedirs(logdir)
 
-    if not os.path.exists(logdir):
-        os.makedirs(logdir)
+env = SearchAndRescueEnv()
+env.reset()
 
-    env = SearchAndRescueEnv()
-    env.reset()
+model = PPO("MultiInputPolicy", env, verbose=1)
+logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
 
-    model = A2C("MultiInputPolicy", env,learning_rate=learning_rate, ent_coef=ent_coef, verbose=1)
-    logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
-
-    mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=10)
-    wandb.log({"mean_reward": mean_reward})
-    model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"A2C")
-    model.save(f"a2c_{trial}_{mean_reward}")
-    run.finish()
-    return mean_reward
-
-study = optuna.create_study(direction='maximize')
-study.optimize(objective, n_trials=50)
+mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=10)
+wandb.log({"mean_reward": mean_reward})
+model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"A2C")
+model.save(f"ppo_{mean_reward}")
+run.finish()
 
 # UNIT-TEST
 # try:
