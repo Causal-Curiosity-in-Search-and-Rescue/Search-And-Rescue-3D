@@ -99,7 +99,8 @@ class SearchAndRescueEnv(gym.Env):
             'object_textures': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming texture classes are integers
             'object_movables': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming movable flags are integers
             'walls_info': spaces.Box(low=-np.inf, high=np.inf, shape=(91, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z)
-            'collision_info': spaces.Discrete(5),  # 0: No collision, 1: Collided with wall, 2: Collided with immovable, 3: Collided with movable, 4: collision with goal
+            'rooms_info': spaces.Box(low=-np.inf, high=np.inf, shape=(91, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z)
+            'collision_info': spaces.Discrete(6),  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
             'previous_actions': spaces.Box(low=-1.0, high=2.0, shape=(AGENT_ACTION_LEN,), dtype=np.float32)
         })
         # self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(3+AGENT_ACTION_LEN,), dtype=np.float32)
@@ -617,9 +618,27 @@ class SearchAndRescueEnv(gym.Env):
 
         for contact in contact_points:
             # Check if the contact involves the robot and any of the walls
-            if contact[2] in self.wall_ids or contact[2] in self.room_ids:  # contact[2] is the unique ID of the second object in the collision
+            if contact[2] in self.wall_ids:  # contact[2] is the unique ID of the second object in the collision
                 collision_info['has_collided'] = True
                 collision_info['collided_wall'] = contact[2]  # Store the ID of the wall
+                break  # No need to check further if a collision is found
+
+        return collision_info
+    
+    def check_collision_with_rooms(self):
+        collision_info = {
+            'has_collided': False,
+            'collided_rooms': None
+        }
+
+        # Retrieve all contact points
+        contact_points = p.getContactPoints(bodyA=self.TURTLE)
+
+        for contact in contact_points:
+            # Check if the contact involves the robot and any of the walls
+            if contact[2] in self.room_ids:  # contact[2] is the unique ID of the second object in the collision
+                collision_info['has_collided'] = True
+                collision_info['collided_rooms'] = contact[2]  # Store the ID of the wall
                 break  # No need to check further if a collision is found
 
         return collision_info
@@ -676,14 +695,19 @@ class SearchAndRescueEnv(gym.Env):
         scaled_goal_delta = []
         scaled_object_deltas = []
         scaled_walls_deltas = []
+        scaled_room_deltas = []
 
         # Calculate scaled deltas for walls
         # for wall_id, wall_midpoint in self.wall_midpoints.items():
-        concat_wall_id = self.wall_ids + self.room_ids
-        for _wall_id  in concat_wall_id:
+        for _wall_id  in self.wall_ids:
             _wall_pos,_ = p.getBasePositionAndOrientation(_wall_id)
             delta = [((_wall_pos[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
             scaled_walls_deltas.append(delta)
+            
+        for _room_id  in self.room_ids:
+            _wall_pos,_ = p.getBasePositionAndOrientation(_room_id)
+            delta = [((_wall_pos[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
+            scaled_room_deltas.append(delta)
 
         # Calculate scaled delta for goal
         goal_delta = [((self.goal_position[i] - agent_position[i]) / self.scaling_factor) for i in range(3)]  # 3D delta
@@ -696,7 +720,7 @@ class SearchAndRescueEnv(gym.Env):
             delta = [(object_position[i] - agent_position[i]) / self.scaling_factor for i in range(3)]
             scaled_object_deltas.append(delta)
 
-        return np.array(scaled_goal_delta),np.array(scaled_object_deltas),np.array(scaled_walls_deltas)    
+        return np.array(scaled_goal_delta),np.array(scaled_object_deltas),np.array(scaled_walls_deltas) , np.array(scaled_room_deltas)   
     
     def step(self, action):
         self.prev_actions.append(action)
@@ -727,23 +751,31 @@ class SearchAndRescueEnv(gym.Env):
             collision_status = 1
             self.reward = -10
             self.done = True  
+            
+        # Update the positions
+        self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
+        collision_info = self.check_collision_with_rooms()
+        if collision_info['has_collided']:
+            logging.info('[INFO] Has Colided With Rooms ')
+            collision_status = 2
+            # self.done = True 
 
         obj_collision_info = self.check_collision_with_movable_objects()
         if obj_collision_info['has_collided']:
             logging.info(f"[INFO] Has Colided With a Movable object of UID {obj_collision_info['uid']}")
-            collision_status = 2
+            collision_status = 3
             
         obj_collision_info = self.check_collision_with_immovable_objects()
         if obj_collision_info['has_collided']:
             logging.info(f"[INFO] Has Colided With a Immovable object of UID {obj_collision_info['uid']}")
-            collision_status = 3
+            collision_status = 4
         
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         # handle collision with goal - Set a high reward and set done to true
         goal_collision_info = self.check_collision_with_goal_and_update_state(self.robot_position)
         if goal_collision_info['reached_goal']:
             logging.info('[INFO] Has Reached Goal ')
-            collision_status = 4
+            collision_status = 5
             self.reward = 200
             self.done = True
         
@@ -761,7 +793,7 @@ class SearchAndRescueEnv(gym.Env):
             logging.info(f'[INFO] Episode Ending with Cumlative Reward : {self.cumulative_reward}') # This metric can be used to compare how well the agent performs with and without causal and digital mind
         
         # Compute scaled deltas
-        goal_delta,objects_delta,walls_delta = self.calculate_scaled_deltas(self.robot_position)
+        goal_delta,objects_delta,walls_delta,rooms_delta = self.calculate_scaled_deltas(self.robot_position)
         
         # Updating the Texture and Movability for the Obj
         sorted_object_ids = sorted(self.objectPositions.keys())
@@ -781,6 +813,7 @@ class SearchAndRescueEnv(gym.Env):
             'object_textures':np.array(self.uid_texture_class_pred),
             'object_movables':np.array(self.uid_movable_class_pred), 
             'walls_info':walls_delta,
+            'rooms_info':rooms_delta,
             'collision_info': collision_status,  # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
             'previous_actions': np.array(list(self.prev_actions), dtype=np.int32)
         }
@@ -900,7 +933,7 @@ class SearchAndRescueEnv(gym.Env):
         logging.info(f'Retained Visual Prediction Knowledge : {self.visual_predictions} \n')
 
         # Compute scaled deltas
-        goal_delta,objects_delta,walls_delta = self.calculate_scaled_deltas(self.robot_position)
+        goal_delta,objects_delta,walls_delta,rooms_delta = self.calculate_scaled_deltas(self.robot_position)
         # Flatten scaled_deltas and add them to your observation
         # wall_deltas = [delta for deltas in scaled_deltas['walls'].values() for delta in deltas]  # Flatten wall deltas
         # goal_delta = scaled_deltas['goal']
@@ -917,6 +950,7 @@ class SearchAndRescueEnv(gym.Env):
             'object_textures':np.array(self.uid_texture_class_pred),
             'object_movables':np.array(self.uid_movable_class_pred),
             'walls_info':walls_delta,
+            'rooms_info':rooms_delta,
             'collision_info': 0,  # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
             'previous_actions': np.array(list(self.prev_actions), dtype=np.int32)
         }
