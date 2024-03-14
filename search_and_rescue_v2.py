@@ -31,7 +31,7 @@ BASE_PATH = os.path.join(os.getcwd(),"resources")
 # LOAD COMPUTERVISION MODELS
 CV_MODEL = load(f"{BASE_PATH}/models/unsup_txture_clsf_rf.joblib")
 CV_SCALER = load(f"{BASE_PATH}/models/unsup_txture_clsf_scaler.joblib")
-CV_THRESHOLD = 0.5
+CV_THRESHOLD = 0.8
 MOVABILITY_THRESHOLD = 0.7
 SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 
@@ -40,8 +40,8 @@ ENV_MANAGER = EnvironmentObjectsManager()
 
 # Define How Long the Robot should be Operational in the Environment
 AGENT_ACTION_LEN = 30
-# p.connect(p.GUI)
-p.connect(p.DIRECT)
+p.connect(p.GUI)
+# p.connect(p.DIRECT)
 
 height = 20
 width = 20
@@ -759,7 +759,8 @@ class SearchAndRescueEnv(gym.Env):
         if collision_info['has_collided']:
             logging.info('[INFO] Has Colided With Rooms ')
             collision_status = 2
-            # self.done = True 
+            self.reward = 5
+            self.done = True 
 
         obj_collision_info = self.check_collision_with_movable_objects()
         if obj_collision_info['has_collided']:
@@ -988,7 +989,7 @@ done = False
 model = A2C("MultiInputPolicy", env, verbose=1)
 logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
 
-TIMESTEPS = 20000
+TIMESTEPS =1000
 # iters = 0
 # while iters < 10:
 # iters += 1
