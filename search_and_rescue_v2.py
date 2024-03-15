@@ -688,7 +688,7 @@ class SearchAndRescueEnv(gym.Env):
         return collision_info   
     
     def prepare_positional_data_for_obs(self):
-        position_data = self.robot_position + self.goal_position + list(self.prev_actions)
+        position_data = list(self.robot_position) + list(self.goal_position) + list(self.prev_actions)
         print('[DEBUG] Positional Data : ',np.array(position_data).shape)
         return position_data
     
