@@ -700,7 +700,7 @@ class SearchAndRescueEnv(gym.Env):
             index = sorted_object_ids.index(object_id)
             object_position = self.objectPositions[object_id]
             delta = [(object_position[i] - self.robot_position[i])  for i in range(3)]
-            object_data = delta + [self.uid_texture_class_pred[index]] + [self.uid_movable_class_pred(index)]
+            object_data = delta + [self.uid_texture_class_pred[index]] + [self.uid_movable_class_pred[index]]
             scaled_object_deltas.append(object_data)
         print('[DEBUG] : Objets Data : ',np.array(scaled_object_deltas).shape)
         return scaled_object_deltas
