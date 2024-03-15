@@ -44,17 +44,17 @@ SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 # Initialize Digital MIND
 ENV_MANAGER = EnvironmentObjectsManager()
 
-AGENT_ACTION_LEN = 30
+AGENT_ACTION_LEN = 500
 p.connect(p.GUI)
 # p.connect(p.DIRECT)
 
 height = 20
 width = 20
-num_m = 2 # Movable
-num_i = 15 # Immovable
+num_m = 3 # Movable
+num_i = 10 # Immovable
 num_s = 1 # Start Positions
 n_texture_classes = 2
-n_objects = num_m + 2 + num_i
+n_objects = num_m + 4 + num_i
 map_plan = generate_maze_with_objects(height, width, num_m, num_i, num_s) 
 with open('maze_plan.pkl','wb') as file:
     pickle.dump(map_plan,file)
@@ -87,8 +87,8 @@ class SearchAndRescueEnv(gym.Env):
         self.action_space = spaces.Discrete(3)  # Forward, Left, Right
         self.observation_space = spaces.Dict({
             'positional_data': spaces.Box(low=np.inf, high=np.inf, shape=(6+AGENT_ACTION_LEN,), dtype=np.float32),
-            'object_data': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 9), dtype=np.float32),
-            'wall_data': spaces.Box(low=-np.inf, high=np.inf, shape=(90, 7), dtype=np.float32)  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
+            'object_data': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 5), dtype=np.float32),
+            # 'wall_data': spaces.Box(low=-np.inf, high=np.inf, shape=(76, 4), dtype=np.float32)  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
         })
 
         # Initial Params
@@ -481,7 +481,7 @@ class SearchAndRescueEnv(gym.Env):
             dot_product = np.dot(norm_obj_vector, norm_robot_vector)
 
             # Check if the movement direction is similar (dot product close to 1)
-            if dot_product > 0.5:  # Adjust this value based on how strict you want this check to be
+            if dot_product > 0.1:  # Adjust this value based on how strict you want this check to be
                 aligned_movement = True
 
         # The object is considered moved due to the robot if it moved significantly and in alignment with the robot's movement
@@ -704,7 +704,7 @@ class SearchAndRescueEnv(gym.Env):
             index = sorted_object_ids.index(object_id)
             object_position = self.objectPositions[object_id]
             # delta = [(object_position[i] - self.robot_position[i])  for i in range(3)]
-            object_data = list(self.robot_position) + list(object_position) + [self.uid_texture_class_pred[index]] + [self.uid_movable_class_pred[index]] + [collision_status]
+            object_data = list(object_position) + [self.uid_texture_class_pred[index]] + [self.uid_movable_class_pred[index]] #+ [collision_status]
             scaled_object_deltas.append(object_data)
         print('[DEBUG] : Objets Data : ',np.array(scaled_object_deltas).shape)
         return np.array(scaled_object_deltas)
@@ -724,10 +724,10 @@ class SearchAndRescueEnv(gym.Env):
     def prepare_walls_data(self,collision_status):
         # for wall_id, wall_midpoint in self.wall_midpoints.items():
         wall_data = []
-        combined_wall_ids = self.wall_ids + self.room_ids
+        combined_wall_ids = self.wall_ids 
         for _wall_id  in combined_wall_ids:
             _wall_pos,_ = p.getBasePositionAndOrientation(_wall_id)
-            _wall_data = list(self.robot_position) + list(_wall_pos) + [collision_status]
+            _wall_data =  list(_wall_pos) + [collision_status]
             wall_data.append(_wall_data)
         print(f'[DEBUG] Wall Data : {np.array(wall_data).shape}')
         return np.array(wall_data)
@@ -847,7 +847,7 @@ class SearchAndRescueEnv(gym.Env):
         observation_space = {
             'positional_data': positional_data,
             'object_data': objects_data,
-            'wall_data': wall_data, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
+            # 'wall_data': wall_data, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
         }
         
         info = {}
@@ -954,7 +954,7 @@ class SearchAndRescueEnv(gym.Env):
         self.current_step = 0
         self.cumulative_reward = 0
         self.goal_reached = False
-        self.max_steps = 1000
+        self.max_steps = 500
         
         self.prev_actions = deque(maxlen=AGENT_ACTION_LEN)
         for i in range(AGENT_ACTION_LEN):
@@ -980,13 +980,13 @@ class SearchAndRescueEnv(gym.Env):
             self.uid_movable_class_pred.append(-1)
         
         positional_data = self.prepare_positional_data_for_obs()
-        objects_data = self.prepare_objects_data(0)
-        wall_data = self.prepare_walls_data(0)
+        objects_data = self.prepare_objects_data(2)
+        wall_data = self.prepare_walls_data(1)
         
         observation_space = {
             'positional_data': positional_data,
             'object_data': objects_data,
-            'wall_data': wall_data, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
+            # 'wall_data': wall_data, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
         }
        
         return observation_space
