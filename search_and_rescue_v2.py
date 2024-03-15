@@ -87,8 +87,8 @@ class SearchAndRescueEnv(gym.Env):
         self.action_space = spaces.Discrete(3)  # Forward, Left, Right
         self.observation_space = spaces.Dict({
             'positional_data': spaces.Box(low=np.inf, high=np.inf, shape=(6+AGENT_ACTION_LEN,), dtype=np.float32),
-            'object_data': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 6), dtype=np.float32),
-            'wall_data': spaces.Box(low=-np.inf, high=np.inf, shape=(90, 4), dtype=np.float32)  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
+            'object_data': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 9), dtype=np.float32),
+            'wall_data': spaces.Box(low=-np.inf, high=np.inf, shape=(90, 7), dtype=np.float32)  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
         })
 
         # Initial Params
@@ -704,7 +704,7 @@ class SearchAndRescueEnv(gym.Env):
             index = sorted_object_ids.index(object_id)
             object_position = self.objectPositions[object_id]
             # delta = [(object_position[i] - self.robot_position[i])  for i in range(3)]
-            object_data = list(object_position) + [self.uid_texture_class_pred[index]] + [self.uid_movable_class_pred[index]] + [collision_status]
+            object_data = list(self.robot_position) + list(object_position) + [self.uid_texture_class_pred[index]] + [self.uid_movable_class_pred[index]] + [collision_status]
             scaled_object_deltas.append(object_data)
         print('[DEBUG] : Objets Data : ',np.array(scaled_object_deltas).shape)
         return np.array(scaled_object_deltas)
@@ -727,7 +727,7 @@ class SearchAndRescueEnv(gym.Env):
         combined_wall_ids = self.wall_ids + self.room_ids
         for _wall_id  in combined_wall_ids:
             _wall_pos,_ = p.getBasePositionAndOrientation(_wall_id)
-            _wall_data = list(_wall_pos) + [collision_status]
+            _wall_data = list(self.robot_position) + list(_wall_pos) + [collision_status]
             wall_data.append(_wall_data)
         print(f'[DEBUG] Wall Data : {np.array(wall_data).shape}')
         return np.array(wall_data)
