@@ -87,8 +87,8 @@ class SearchAndRescueEnv(gym.Env):
         self.action_space = spaces.Discrete(3)  # Forward, Left, Right
         self.observation_space = spaces.Dict({
             'positional_data': spaces.Box(low=np.inf, high=np.inf, shape=(6+AGENT_ACTION_LEN,), dtype=np.float32),
-            'object_data': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 5), dtype=np.float32),
-            'collision_info': spaces.Discrete(6)  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
+            'object_data': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 6), dtype=np.float32),
+            'wall_data': spaces.Box(low=-np.inf, high=np.inf, shape=(90, 4), dtype=np.float32)  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
         })
 
         # Initial Params
@@ -727,8 +727,8 @@ class SearchAndRescueEnv(gym.Env):
         combined_wall_ids = self.wall_ids + self.room_ids
         for _wall_id  in combined_wall_ids:
             _wall_pos,_ = p.getBasePositionAndOrientation(_wall_id)
-            wall_data = list(_wall_pos) + [collision_status]
-            wall_data.append(wall_data)
+            _wall_data = list(_wall_pos) + [collision_status]
+            wall_data.append(_wall_data)
         print(f'[DEBUG] Wall Data : {np.array(wall_data).shape}')
         return np.array(wall_data)
             
