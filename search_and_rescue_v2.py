@@ -696,7 +696,7 @@ class SearchAndRescueEnv(gym.Env):
         print('[DEBUG] Positional Data : ',np.array(position_data).shape)
         return np.array(position_data)
     
-    def prepare_objects_data(self):
+    def prepare_objects_data(self,collision_status):
         # Create a sorted list of object IDs
         scaled_object_deltas = []
         sorted_object_ids = sorted(self.objectPositions.keys())
@@ -704,10 +704,10 @@ class SearchAndRescueEnv(gym.Env):
             index = sorted_object_ids.index(object_id)
             object_position = self.objectPositions[object_id]
             # delta = [(object_position[i] - self.robot_position[i])  for i in range(3)]
-            object_data = list(object_position) + [self.uid_texture_class_pred[index]] + [self.uid_movable_class_pred[index]]
+            object_data = list(object_position) + [self.uid_texture_class_pred[index]] + [self.uid_movable_class_pred[index]] + [collision_status]
             scaled_object_deltas.append(object_data)
         print('[DEBUG] : Objets Data : ',np.array(scaled_object_deltas).shape)
-        return scaled_object_deltas
+        return np.array(scaled_object_deltas)
             
     def update_uid_texture_class_and_movability(self,sensing_info):
         sorted_object_ids = sorted(self.objectPositions.keys())
@@ -720,6 +720,20 @@ class SearchAndRescueEnv(gym.Env):
                         if obj.texture_class != None:
                             self.uid_texture_class_pred[index]=obj.texture_class 
                             self.uid_movable_class_pred[index]=obj.casual_probability 
+    
+    def prepare_walls_data(self,collision_status):
+        # for wall_id, wall_midpoint in self.wall_midpoints.items():
+        wall_data = []
+        combined_wall_ids = self.wall_ids + self.room_ids
+        for _wall_id  in combined_wall_ids:
+            _wall_pos,_ = p.getBasePositionAndOrientation(_wall_id)
+            wall_data = list(_wall_pos) + [collision_status]
+            wall_data.append(wall_data)
+        print(f'[DEBUG] Wall Data : {np.array(wall_data).shape}')
+        return np.array(wall_data)
+            
+    #         delta = [((wall_midpoint[i] - agent_position[i])) for i in range(3)]  # 3D delta
+    #         scaled_walls_deltas.append(delta)
     
     # def calculate_scaled_deltas(self, agent_position):
     #     scaled_goal_delta = []
@@ -827,12 +841,13 @@ class SearchAndRescueEnv(gym.Env):
         
         self.update_uid_texture_class_and_movability(sensing_info)
         positional_data = self.prepare_positional_data_for_obs()
-        objects_data = self.prepare_objects_data()
+        objects_data = self.prepare_objects_data(collision_status)
+        wall_data = self.prepare_walls_data(collision_status)
         
         observation_space = {
             'positional_data': positional_data,
             'object_data': objects_data,
-            'collision_info': collision_status, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
+            'wall_data': wall_data, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
         }
         
         info = {}
@@ -965,12 +980,13 @@ class SearchAndRescueEnv(gym.Env):
             self.uid_movable_class_pred.append(-1)
         
         positional_data = self.prepare_positional_data_for_obs()
-        objects_data = self.prepare_objects_data()
+        objects_data = self.prepare_objects_data(0)
+        wall_data = self.prepare_walls_data(0)
         
         observation_space = {
             'positional_data': positional_data,
             'object_data': objects_data,
-            'collision_info': 0, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
+            'wall_data': wall_data, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
         }
        
         return observation_space
