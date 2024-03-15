@@ -690,14 +690,14 @@ class SearchAndRescueEnv(gym.Env):
     def prepare_positional_data_for_obs(self):
         position_data = list(self.robot_position) + list(self.goal_position) + list(self.prev_actions)
         print('[DEBUG] Positional Data : ',np.array(position_data).shape)
-        return position_data
+        return np.array(position_data)
     
     def prepare_objects_data(self):
         # Create a sorted list of object IDs
         scaled_object_deltas = []
         sorted_object_ids = sorted(self.objectPositions.keys())
         for object_id in sorted_object_ids:
-            index = sorted_object_ids(object_id)
+            index = sorted_object_ids.index(object_id)
             object_position = self.objectPositions[object_id]
             delta = [(object_position[i] - self.robot_position[i])  for i in range(3)]
             object_data = delta + [self.uid_texture_class_pred[index]] + [self.uid_movable_class_pred(index)]
