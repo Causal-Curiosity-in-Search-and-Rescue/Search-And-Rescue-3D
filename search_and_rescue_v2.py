@@ -44,14 +44,14 @@ SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 # Initialize Digital MIND
 ENV_MANAGER = EnvironmentObjectsManager()
 
-AGENT_ACTION_LEN = 50
+AGENT_ACTION_LEN = 30
 p.connect(p.GUI)
 # p.connect(p.DIRECT)
 
 height = 20
 width = 20
 num_m = 2 # Movable
-num_i = 10 # Immovable
+num_i = 15 # Immovable
 num_s = 1 # Start Positions
 n_texture_classes = 2
 n_objects = num_m + 2 + num_i
@@ -338,6 +338,10 @@ class SearchAndRescueEnv(gym.Env):
                                 view_matrix,
                                 projection_matrix, shadow=True,
                                 renderer=p.ER_BULLET_HARDWARE_OPENGL)
+        
+        self.rgbImg = rgbImg
+        self.rgbImgWidth = width
+        self.rgbImgHeight = height
         
         ###Get Segmented IDs
         img = np.reshape(rgbImg, (height, width, 4)) * 1. / 255.
@@ -752,6 +756,7 @@ class SearchAndRescueEnv(gym.Env):
         self.prev_actions.append(action)
         self.last_action = action
         self.current_step += 1
+        self.render(mode='rgb_array')
         
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         collision_status = 0
@@ -781,7 +786,7 @@ class SearchAndRescueEnv(gym.Env):
             logging.info('[INFO] Has Colided With Rooms ')
             collision_status = 2
             self.reward = 20
-            # self.done = True 
+            self.done = True 
 
         obj_collision_info = self.check_collision_with_movable_objects()
         if obj_collision_info['has_collided']:
@@ -903,6 +908,9 @@ class SearchAndRescueEnv(gym.Env):
         self.create_walls(map_plan)
         self.movable_obj_ids = []
         self.immovable_obj_ids = []
+        self.rgbImg = None
+        self.rgbImgWidth = None
+        self.rgbImgHeight = None
         
         # Create the Obstacles
         self.objectIDs = self.create_obstacles(map_plan)# List of unique IDs for each instance
@@ -931,7 +939,7 @@ class SearchAndRescueEnv(gym.Env):
         self.current_step = 0
         self.cumulative_reward = 0
         self.goal_reached = False
-        self.max_steps = 500
+        self.max_steps = 1000
         
         self.prev_actions = deque(maxlen=AGENT_ACTION_LEN)
         for i in range(AGENT_ACTION_LEN):
@@ -969,21 +977,8 @@ class SearchAndRescueEnv(gym.Env):
 
     def render(self, mode='rgb_array'):
         if mode == 'rgb_array':
-            # Get the camera image from PyBullet.
-            width, height, rgbImg, depthImg, segImg = p.getCameraImage(
-                width=960, 
-                height=720,
-                viewMatrix=p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[self.robot_position[0], self.robot_position[1], self.robot_position[2]],
-                                                            distance=5.0,
-                                                            yaw=30,
-                                                            pitch=-30,
-                                                            roll=0,
-                                                            upAxisIndex=2),
-                projectionMatrix=p.computeProjectionMatrixFOV(fov=60, aspect=float(960) / 720, nearVal=0.1, farVal=100.0),
-                renderer=p.ER_BULLET_HARDWARE_OPENGL)
-            
-            rgb_array = np.array(rgbImg, dtype=np.uint8)
-            rgb_array = np.reshape(rgb_array, (height, width, 4)) # the last dimension contains RGBA values
+            rgb_array = np.array(self.rgbImg, dtype=np.uint8)
+            rgb_array = np.reshape(rgb_array, (self.rgbImgHeight, self.rgbImgWidth, 4)) # the last dimension contains RGBA values
 
             # We will discard alpha channel if present
             rgb_array = rgb_array[:, :, :3]
