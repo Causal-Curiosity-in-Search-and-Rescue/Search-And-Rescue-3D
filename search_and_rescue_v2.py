@@ -44,14 +44,14 @@ SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 # Initialize Digital MIND
 ENV_MANAGER = EnvironmentObjectsManager()
 
-AGENT_ACTION_LEN = 20
+AGENT_ACTION_LEN = 50
 p.connect(p.GUI)
 # p.connect(p.DIRECT)
 
 height = 20
 width = 20
-num_m = 1 # Movable
-num_i = 20 # Immovable
+num_m = 2 # Movable
+num_i = 10 # Immovable
 num_s = 1 # Start Positions
 n_texture_classes = 2
 n_objects = num_m + 2 + num_i
@@ -699,8 +699,8 @@ class SearchAndRescueEnv(gym.Env):
         for object_id in sorted_object_ids:
             index = sorted_object_ids.index(object_id)
             object_position = self.objectPositions[object_id]
-            delta = [(object_position[i] - self.robot_position[i])  for i in range(3)]
-            object_data = delta + [self.uid_texture_class_pred[index]] + [self.uid_movable_class_pred[index]]
+            # delta = [(object_position[i] - self.robot_position[i])  for i in range(3)]
+            object_data = list(object_position) + [self.uid_texture_class_pred[index]] + [self.uid_movable_class_pred[index]]
             scaled_object_deltas.append(object_data)
         print('[DEBUG] : Objets Data : ',np.array(scaled_object_deltas).shape)
         return scaled_object_deltas
