@@ -27,6 +27,7 @@ import optuna
 from stable_baselines3.common.evaluation import evaluate_policy
 from gym.envs.registration import register
 import wandb
+import imageio
 import pdb
 # import cv2
 
@@ -43,7 +44,6 @@ SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 # Initialize Digital MIND
 ENV_MANAGER = EnvironmentObjectsManager()
 
-# Define How Long the Robot should be Operational in the Environment
 AGENT_ACTION_LEN = 20
 p.connect(p.GUI)
 # p.connect(p.DIRECT)
@@ -55,32 +55,20 @@ num_i = 20 # Immovable
 num_s = 1 # Start Positions
 n_texture_classes = 2
 n_objects = num_m + 2 + num_i
-# MAP1 = [
-#     ['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'r', 'r', 'r', 'r', 'r', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'r', 'c', 'o', 'c', 'r', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'm', 'c', 'c', 'c', 'c', 'r', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'r', 'c', 'c', 'c', 'r', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'r', 'r', 'r', 'r', 'r', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'i', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'c', 'w'],
-#     ['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w']
-# ]
-map_plan = generate_maze_with_objects(height, width, num_m, num_i, num_s) # To Remove Randomization of env . let robot position be random
+map_plan = generate_maze_with_objects(height, width, num_m, num_i, num_s) 
 with open('maze_plan.pkl','wb') as file:
     pickle.dump(map_plan,file)
 visualisemaze(map_plan)
+
+# TRAINING the RL 
+models_dir = f"models/{int(time.time())}/"
+logdir = f"logs/{int(time.time())}/"
+
+if not os.path.exists(models_dir):
+    os.makedirs(models_dir)
+
+if not os.path.exists(logdir):
+    os.makedirs(logdir)
 
 def create_or_update_object(detected_object_id,texture_class,detected_x,detected_y,detected_z,detected_texture):
     attributes = {
@@ -90,26 +78,19 @@ def create_or_update_object(detected_object_id,texture_class,detected_x,detected
         'z': detected_z
     }
     ENV_MANAGER.update_or_create_object(object_id=detected_object_id,texture_class = texture_class,**attributes)
-            
 
 class SearchAndRescueEnv(gym.Env):
-    metadata = {'render_modes': ['human','rgb_array']}
+    metadata = {'render_modes': ['rgb_array']}
   
     def __init__(self):
         super(SearchAndRescueEnv, self).__init__()
         self.action_space = spaces.Discrete(3)  # Forward, Left, Right
-        # Define the observation space
         self.observation_space = spaces.Dict({
             'positional_data': spaces.Box(low=np.inf, high=np.inf, shape=(6+AGENT_ACTION_LEN,), dtype=np.float32),
             'object_data': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 5), dtype=np.float32),
-            # 'object_textures': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming texture classes are integers
-            # 'object_movables': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects,), dtype=np.int32),  # Assuming movable flags are integers
-            # 'walls_info': spaces.Box(low=-np.inf, high=np.inf, shape=(4, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z) 76
-            # 'rooms_info': spaces.Box(low=-np.inf, high=np.inf, shape=(4, 3), dtype=np.float32),  # 4 walls, 3D deltas (x, y, z) 15
             'collision_info': spaces.Discrete(6)  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
         })
-        # self.observation_space = spaces.Box(low=np.inf, high=np.inf, shape=(3+AGENT_ACTION_LEN,), dtype=np.float32)
-        
+
         # Initial Params
         self.movability_dict = {0:None,1:None}
         self.movability_predictions = {}
@@ -119,7 +100,6 @@ class SearchAndRescueEnv(gym.Env):
         for objectID in sorted_obj_ids:
             self.movability_predictions[objectID] = []
             self.causal_probablity_dict[objectID] = 0 # Set 0 for default and do + for the actual 
-        
     
     def create_walls(self,map_plan):
         # define ground
@@ -707,45 +687,72 @@ class SearchAndRescueEnv(gym.Env):
         
         return collision_info   
     
-    def calculate_scaled_deltas(self, agent_position):
-        # Initialize dictionary to store scaled deltas
-        # scaled_deltas = {
-        #     'walls': {},
-        #     'goal': None,
-        #     'objects': {}
-        # }
-        scaled_goal_delta = []
-        scaled_object_deltas = []
-        scaled_walls_deltas = []
-        scaled_room_deltas = []
-
-        # Calculate scaled deltas for walls
-        for wall_id, wall_midpoint in self.wall_midpoints.items():
-        # for _wall_id  in self.wall_ids:
-            # _wall_pos,_ = p.getBasePositionAndOrientation(wall_id)
-            delta = [((wall_midpoint[i] - agent_position[i])) for i in range(3)]  # 3D delta
-            scaled_walls_deltas.append(delta)
-        
-        for room_id, room_midpoint in self.room_wall_midpoints.items():  
-        # for _room_id  in self.room_ids:
-            # _wall_pos,_ = p.getBasePositionAndOrientation(_room_id)
-            delta = [((room_midpoint[i] - agent_position[i]) ) for i in range(3)]  # 3D delta
-            scaled_room_deltas.append(delta)
-
-        # Calculate scaled delta for goal
-        goal_delta = [((self.goal_position[i] - agent_position[i])) for i in range(3)]  # 3D delta
-
+    def prepare_positional_data_for_obs(self):
+        position_data = self.robot_position + self.goal_position + list(self.prev_actions)
+        print('[DEBUG] Positional Data : ',np.array(position_data).shape)
+        return position_data
+    
+    def prepare_objects_data(self):
         # Create a sorted list of object IDs
+        scaled_object_deltas = []
         sorted_object_ids = sorted(self.objectPositions.keys())
         for object_id in sorted_object_ids:
+            index = sorted_object_ids(object_id)
             object_position = self.objectPositions[object_id]
-            delta = [(object_position[i] - agent_position[i])  for i in range(3)]
-            scaled_object_deltas.append(delta)
+            delta = [(object_position[i] - self.robot_position[i])  for i in range(3)]
+            object_data = delta + [self.uid_texture_class_pred[index]] + [self.uid_movable_class_pred(index)]
+            scaled_object_deltas.append(object_data)
+        print('[DEBUG] : Objets Data : ',np.array(scaled_object_deltas).shape)
+        return scaled_object_deltas
+            
+    def update_uid_texture_class_and_movability(self,sensing_info):
+        sorted_object_ids = sorted(self.objectPositions.keys())
+        for idx in range(len(sensing_info)):
+            info = sensing_info[idx]
+            if info['is_facing_object']:
+                index = sorted_object_ids.index(info['obj_id'])
+                for obj_id, obj in ENV_MANAGER.objects.items():
+                    if obj.id == info['obj_id']:
+                        if obj.texture_class != None:
+                            self.uid_texture_class_pred[index]=obj.texture_class 
+                            self.uid_movable_class_pred[index]=obj.casual_probability 
+    
+    # def calculate_scaled_deltas(self, agent_position):
+    #     scaled_goal_delta = []
+    #     scaled_object_deltas = []
+    #     scaled_walls_deltas = []
+    #     scaled_room_deltas = []
 
-        return np.array(scaled_goal_delta),np.array(scaled_object_deltas),np.array(scaled_walls_deltas) , np.array(scaled_room_deltas)   
+    #     # Calculate scaled deltas for walls
+    #     for wall_id, wall_midpoint in self.wall_midpoints.items():
+    #     # for _wall_id  in self.wall_ids:
+    #         # _wall_pos,_ = p.getBasePositionAndOrientation(wall_id)
+    #         delta = [((wall_midpoint[i] - agent_position[i])) for i in range(3)]  # 3D delta
+    #         scaled_walls_deltas.append(delta)
+        
+    #     for room_id, room_midpoint in self.room_wall_midpoints.items():  
+    #     # for _room_id  in self.room_ids:
+    #         # _wall_pos,_ = p.getBasePositionAndOrientation(_room_id)
+    #         delta = [((room_midpoint[i] - agent_position[i]) ) for i in range(3)]  # 3D delta
+    #         scaled_room_deltas.append(delta)
+
+    #     # Calculate scaled delta for goal
+    #     goal_delta = [((self.goal_position[i] - agent_position[i])) for i in range(3)]  # 3D delta
+
+    #     # Create a sorted list of object IDs
+    #     sorted_object_ids = sorted(self.objectPositions.keys())
+    #     for object_id in sorted_object_ids:
+    #         object_position = self.objectPositions[object_id]
+    #         delta = [(object_position[i] - agent_position[i])  for i in range(3)]
+    #         scaled_object_deltas.append(delta)
+
+    #     return np.array(scaled_goal_delta),np.array(scaled_object_deltas),np.array(scaled_walls_deltas) , np.array(scaled_room_deltas)   
     
     def step(self, action):
         self.prev_actions.append(action)
+        self.last_action = action
+        self.current_step += 1
+        
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         collision_status = 0
 
@@ -778,11 +785,13 @@ class SearchAndRescueEnv(gym.Env):
 
         obj_collision_info = self.check_collision_with_movable_objects()
         if obj_collision_info['has_collided']:
+            self.cummulative_interactions_with_movable_objects += 1
             logging.info(f"[INFO] Has Colided With a Movable object of UID {obj_collision_info['uid']}")
             collision_status = 3
             
         obj_collision_info = self.check_collision_with_immovable_objects()
         if obj_collision_info['has_collided']:
+            self.cummulative_interactions_with_immovable_objects += 1
             logging.info(f"[INFO] Has Colided With a Immovable object of UID {obj_collision_info['uid']}")
             collision_status = 4
         
@@ -790,13 +799,13 @@ class SearchAndRescueEnv(gym.Env):
         # handle collision with goal - Set a high reward and set done to true
         goal_collision_info = self.check_collision_with_goal_and_update_state(self.robot_position)
         if goal_collision_info['reached_goal']:
-            logging.info('[INFO] Has Reached Goal ')
+            logging.info('[GOAL] Has Reached Goal ')
+            logging.info(f'[GOAL] Number of Interactions with Movable Object : {self.cummulative_interactions_with_movable_objects}')
+            logging.info(f'[GOAL] Number of Interactions with Immovable Object : {self.cummulative_interactions_with_immovable_objects}')
+            logging.ingo(f'[GOAL] Number of Steps Taken to Reach Goal : {self.current_step}')
             collision_status = 5
             self.reward = 200
             self.done = True
-        
-        self.last_action = action
-        self.current_step += 1
         
         # Check if Number of Steps Greater than Max Steps If So Set Episode to be Done - to Prevent the agent to Wander The environment indefinetly during learning
         if self.current_step > self.max_steps:
@@ -809,25 +818,18 @@ class SearchAndRescueEnv(gym.Env):
             logging.info(f'[INFO] Episode Ending with Cumlative Reward : {self.cumulative_reward}') # This metric can be used to compare how well the agent performs with and without causal and digital mind
         
         # Compute scaled deltas
-        goal_delta,objects_delta,walls_delta,rooms_delta = self.calculate_scaled_deltas(self.robot_position)
+        # goal_delta,objects_delta,walls_delta,rooms_delta = self.calculate_scaled_deltas(self.robot_position)
         
-        # Updating the Texture and Movability for the Obj
-        sorted_object_ids = sorted(self.objectPositions.keys())
-        for idx in range(len(sensing_info)):
-            info = sensing_info[idx]
-            if info['is_facing_object']:
-                index = sorted_object_ids.index(info['obj_id'])
-                for obj_id, obj in ENV_MANAGER.objects.items():
-                    if obj.id == info['obj_id']:
-                        if obj.texture_class != None:
-                            self.uid_texture_class_pred[index]=obj.texture_class + 1
-                            self.uid_movable_class_pred[index]=obj.casual_probability + 1
+        self.update_uid_texture_class_and_movability(sensing_info)
+        positional_data = self.prepare_positional_data_for_obs()
+        objects_data = self.prepare_objects_data()
         
         observation_space = {
-            'positional_data': self.robot_position + self.goal_position + list(self.prev_actions),
-            'objects_data': objects_delta,
+            'positional_data': positional_data,
+            'objects_data': objects_data,
             'collision_info': collision_status, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
         }
+        
         info = {}
         self.dump_digital_mind_to_json()
         return observation_space,self.reward,self.done,info
@@ -922,7 +924,8 @@ class SearchAndRescueEnv(gym.Env):
         for objectID in sorted_obj_ids:
             self.visual_predictions[objectID] = []
         self.frames=[]
-        # self.visitation_grid = np.zeros((height,width), dtype=int) 
+        self.cummulative_interactions_with_movable_objects = 0
+        self.cummulative_interactions_with_immovable_objects = 0
         
         # Evaluation Init
         self.current_step = 0
@@ -945,75 +948,97 @@ class SearchAndRescueEnv(gym.Env):
         logging.info(f'Retained Visual Prediction Knowledge : {self.visual_predictions} \n')
 
         # Compute scaled deltas
-        goal_delta,objects_delta,walls_delta,rooms_delta = self.calculate_scaled_deltas(self.robot_position)
-        # Flatten scaled_deltas and add them to your observation
-        # wall_deltas = [delta for deltas in scaled_deltas['walls'].values() for delta in deltas]  # Flatten wall deltas
-        # goal_delta = scaled_deltas['goal']
-        # object_deltas = [delta for deltas in scaled_deltas['objects'].values() for delta in deltas]  # Flatten object deltas
+        # goal_delta,objects_delta,walls_delta,rooms_delta = self.calculate_scaled_deltas(self.robot_position)
+
         self.uid_texture_class_pred = []
         self.uid_movable_class_pred = []
         for object_id, object_position in self.objectPositions.items(): 
-            self.uid_texture_class_pred.append(0)
-            self.uid_movable_class_pred.append(0)
+            self.uid_texture_class_pred.append(-1)
+            self.uid_movable_class_pred.append(-1)
+        
+        positional_data = self.prepare_positional_data_for_obs()
+        objects_data = self.prepare_objects_data()
         
         observation_space = {
-            'positional_data': self.robot_position + self.goal_position + list(self.prev_actions),
-            'goal_position': goal_delta,
-            'object_textures':np.array(self.uid_texture_class_pred),
-            'object_movables':np.array(self.uid_movable_class_pred),
-            # 'walls_info':walls_delta,
-            # 'rooms_info':rooms_delta,
-            'collision_info': 0,  # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
-            'previous_actions': np.array(list(self.prev_actions), dtype=np.int32)
+            'positional_data': positional_data,
+            'objects_data': objects_data,
+            'collision_info': 0, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
         }
-        
-        # observation = goal_delta + list(self.prev_actions) # + wall_deltas + object_deltas #+ flattened_rl_info + [int(self.robot_position[0]), int(self.robot_position[1])]
-        # observation = np.array(observation)
+       
         return observation_space
 
-    def render(self, mode='human'):
-        # if mode == 'rgb_array':
-        #     # Get the view matrix from the current camera settings.
-        #     view_matrix = p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[self.robot_position[0], self.robot_position[1], 0.5],
-        #                                                       distance=5.0,
-        #                                                       yaw=30,
-        #                                                       pitch=-30,
-        #                                                       roll=0,
-        #                                                       upAxisIndex=2)
-        #     # Set up the projection matrix.
-        #     proj_matrix = p.computeProjectionMatrixFOV(fov=60, aspect=float(960) / 720, nearVal=0.1, farVal=100.0)
-        #     # Generate the image using the view and projection matrices.
-        #     (_, _, px, _, _) = p.getCameraImage(width=960, height=720, viewMatrix=view_matrix,
-        #                                        projectionMatrix=proj_matrix, renderer=p.ER_BULLET_HARDWARE_OPENGL)
+    def render(self, mode='rgb_array'):
+        if mode == 'rgb_array':
+            # Get the camera image from PyBullet.
+            width, height, rgbImg, depthImg, segImg = p.getCameraImage(
+                width=960, 
+                height=720,
+                viewMatrix=p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[self.robot_position[0], self.robot_position[1], self.robot_position[2]],
+                                                            distance=5.0,
+                                                            yaw=30,
+                                                            pitch=-30,
+                                                            roll=0,
+                                                            upAxisIndex=2),
+                projectionMatrix=p.computeProjectionMatrixFOV(fov=60, aspect=float(960) / 720, nearVal=0.1, farVal=100.0),
+                renderer=p.ER_BULLET_HARDWARE_OPENGL)
             
-        #     rgb_array = np.array(px, dtype=np.uint8)
-        #     rgb_array = np.reshape(rgb_array, (720, 960, 4))
+            rgb_array = np.array(rgbImg, dtype=np.uint8)
+            rgb_array = np.reshape(rgb_array, (height, width, 4)) # the last dimension contains RGBA values
 
-        #     self.frames.append(rgb_array)  # Assuming self.frames is initialized in __init__
+            # We will discard alpha channel if present
+            rgb_array = rgb_array[:, :, :3]
 
-        #     return rgb_array
-        # elif mode == 'human':
-        #     # Implement human mode rendering if necessary
-        pass
+            self.frames.append(rgb_array) # store frames to create video later
+
+            return rgb_array
     
     def close(self):
-        # # Convert frames to video
-        # if len(self.frames) > 0:
-        #     height, width, layers = self.frames[0].shape
-        #     video_codec = cv2.VideoWriter_fourcc(*'XVID')
-        #     video = cv2.VideoWriter('episode_video.avi', video_codec, frameRate=30.0, frameSize=(width,height))
-
-        #     for frame in self.frames:
-        #         video.write(frame)
-
-        #     cv2.destroyAllWindows()
-        #     video.release()
-
+        if len(self.frames) > 0:
+            # Create a video from frames
+            with imageio.get_writer(f'{models_dir}episode_video.mp4', fps=20) as video:
+                for frame in self.frames:
+                    video.append_data(frame)
+            self.frames = []  # Reset the frame list for the next episode
         p.disconnect()
     
     def seed(self, seed=None):  
         pass # Not Needed
 
+TIMESTEPS =10000
+run = wandb.init(project="[GDP] Search&Rescue-3D", entity="juliangeralddcruz", reinit=True)
+wandb.init(
+        project="[GDP] Search&Rescue-3D",
+        monitor_gym=True,       # automatically upload gym environements' videos
+        save_code=True,
+    )
+
+env = SearchAndRescueEnv()
+env.reset()
+
+model = PPO("MultiInputPolicy", env, verbose=1)
+logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
+
+mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=10)
+wandb.log({"mean_reward": mean_reward})
+model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"A2C")
+model.save(f"ppo_{mean_reward}")
+env.close()
+# Log the video to WandB
+video_path = f'{models_dir}episode_video.mp4'  # Assuming env.models_dir is where your videos are saved
+wandb.log({"episode_video": wandb.Video(video_path, fps=4, format="mp4")})
+run.finish()
+
+# UNIT-TEST
+# try:
+#     while not done:
+#         action = env.action_space.sample()  # Take a random action or implement your control logic here
+#         logging.debug(f'Taking a step with action: {action}')
+#         observation, reward, done, info = env.step(action)
+#         logging.debug(f'Step taken. Observation: {observation}, Reward: {reward}, Done: {done}, Info: {info}')
+# except Exception as e:
+#     logging.error(f'An error occurred: {e}', exc_info=True)
+
+## Hyperparameter Tuning test 
 # def objective(trial):
 #     run = wandb.init(project="[GDP] Search&Rescue-3D", entity="juliangeralddcruz", reinit=True)
 #     learning_rate = trial.suggest_loguniform('learning_rate', 1e-4, 1e-3)
@@ -1058,47 +1083,3 @@ class SearchAndRescueEnv(gym.Env):
 
 # study = optuna.create_study(direction='maximize')
 # study.optimize(objective, n_trials=50)
-
-
-TIMESTEPS =10000
-run = wandb.init(project="[GDP] Search&Rescue-3D", entity="juliangeralddcruz", reinit=True)
-wandb.init(
-        project="[GDP] Search&Rescue-3D",
-        monitor_gym=True,       # automatically upload gym environements' videos
-        save_code=True,
-    )
-# TRAINING the RL 
-models_dir = f"models/{int(time.time())}/"
-logdir = f"logs/{int(time.time())}/"
-
-if not os.path.exists(models_dir):
-    os.makedirs(models_dir)
-
-if not os.path.exists(logdir):
-    os.makedirs(logdir)
-
-env = SearchAndRescueEnv()
-env.reset()
-
-model = PPO("MultiInputPolicy", env, verbose=1)
-logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
-
-mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=10)
-wandb.log({"mean_reward": mean_reward})
-model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"A2C")
-model.save(f"ppo_{mean_reward}")
-run.finish()
-
-# UNIT-TEST
-# try:
-#     while not done:
-#         action = env.action_space.sample()  # Take a random action or implement your control logic here
-#         logging.debug(f'Taking a step with action: {action}')
-#         observation, reward, done, info = env.step(action)
-#         logging.debug(f'Step taken. Observation: {observation}, Reward: {reward}, Done: {done}, Info: {info}')
-# except Exception as e:
-#     logging.error(f'An error occurred: {e}', exc_info=True)
-
-input("Press Enter to continue...")
-
-env.close()
