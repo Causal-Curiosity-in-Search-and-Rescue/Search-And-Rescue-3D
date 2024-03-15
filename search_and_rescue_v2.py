@@ -826,7 +826,7 @@ class SearchAndRescueEnv(gym.Env):
         
         observation_space = {
             'positional_data': positional_data,
-            'objects_data': objects_data,
+            'object_data': objects_data,
             'collision_info': collision_status, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
         }
         
@@ -961,7 +961,7 @@ class SearchAndRescueEnv(gym.Env):
         
         observation_space = {
             'positional_data': positional_data,
-            'objects_data': objects_data,
+            'object_data': objects_data,
             'collision_info': 0, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
         }
        
