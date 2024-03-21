@@ -5,7 +5,7 @@ def calculate_reward(current_position, current_step, goal_position, wall_positio
 
     # Distance to goal reward
     goal_distance = np.linalg.norm(np.array(goal_position) - np.array(current_position))
-    max_possible_distance = np.sqrt(12**2 + 12**2 + 12**2)  # Adjust for your grid
+    max_possible_distance = np.sqrt(11**2 + 11**2 + 11**2)  # Adjust for your grid
     reward += (1 - goal_distance / max_possible_distance) * 10  # Adjust scaling factor as needed
 
     # Wall proximity penalty

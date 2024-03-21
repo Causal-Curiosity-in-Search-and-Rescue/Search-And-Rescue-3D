@@ -301,8 +301,10 @@ class SearchAndRescueEnv(gym.Env):
         # if action == 1: #backward 
         #     move = 0
         if action == 1: # turn right
+            move = 0
             turn = 0
         if action == 2: #turn left 
+            move = 0
             turn = 0
         
         rightWheelVelocity += (move + turn) * speed
@@ -697,6 +699,7 @@ class SearchAndRescueEnv(gym.Env):
     def prepare_positional_data_for_obs(self):
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         assert all(0 <= pos <= 11 for pos in self.robot_position), "Robot Position out of bounds"
+        position_data = list(self.robot_position) + list(self.goal_position) + list(self.prev_actions)
         position_data = list(self.robot_position) + list(self.goal_position) + list(self.prev_actions)
         # print('[DEBUG] Positional Data : ',np.array(position_data).shape)
         return np.array(position_data,dtype=np.float32)
