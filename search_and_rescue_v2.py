@@ -959,7 +959,8 @@ class SearchAndRescueEnv(gym.Env):
                             starty=j
         print(f"StartX:{startx}, StartY{starty}")
         self.robotStartPos = [startx, starty, 0]
-        self.TURTLE = p.loadURDF(f"{BASE_PATH}/urdf/most_simple_turtle.urdf", [startx, starty, 0])
+        self.create_agent()
+        # self.TURTLE = p.loadURDF(f"{BASE_PATH}/urdf/most_simple_turtle.urdf", [startx, starty, 0])
         self.PLANE = p.loadURDF(f"{BASE_PATH}//urdf/plane_box.urdf")
         self.CRACKED_1 = p.loadTexture(f"{BASE_PATH}/textures/cracked_0052.png")
         self.MARBLED_1 = p.loadTexture(f"{BASE_PATH}/textures/grooved_0051.png")
