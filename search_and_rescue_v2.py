@@ -31,6 +31,7 @@ import wandb
 import pdb
 import cv2
 from PIL import Image
+from reward_helper import calculate_reward
 
 # LOAD THE URDF FILES AND TEXTURES
 BASE_PATH = os.path.join(os.getcwd(),"resources")
@@ -46,6 +47,8 @@ SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 ENV_MANAGER = EnvironmentObjectsManager()
 
 AGENT_ACTION_LEN = 100
+TIMESTEPS = 10000
+MAX_STEPS = 150
 p.connect(p.GUI)
 # p.connect(p.DIRECT)
 
@@ -729,14 +732,16 @@ class SearchAndRescueEnv(gym.Env):
     def prepare_walls_data(self,collision_status):
         # for wall_id, wall_midpoint in self.wall_midpoints.items():
         wall_data = []
+        wall_positions = []
         combined_wall_ids = self.wall_ids 
         for _wall_id  in combined_wall_ids:
             _wall_pos,_ = p.getBasePositionAndOrientation(_wall_id)
             assert all(0 <= pos <= 11 for pos in _wall_pos), "Wall Position out of Bounds"
             _wall_data =  list(_wall_pos) + [collision_status]
             wall_data.append(_wall_data)
+            wall_positions.append(_wall_pos)
         print(f'[DEBUG] Wall Data : {np.array(wall_data).shape}')
-        return np.array(wall_data)
+        return np.array(wall_data),wall_positions
             
     #         delta = [((wall_midpoint[i] - agent_position[i])) for i in range(3)]  # 3D delta
     #         scaled_walls_deltas.append(delta)
@@ -792,36 +797,17 @@ class SearchAndRescueEnv(gym.Env):
         # Update the positions
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         
-        # Reward based on distance between goal and agent 
-        # Calculate the normalized distance (assuming the maximum possible distance is the diagonal of your space, adjust accordingly)
-        # max_distance = np.sqrt(12**2 + 12**2 + 12**2)  # Assuming a 3D environment, replace with your actual max distance
-        # normalized_distance = distance_3d(self.robot_position, self.goal_position) / max_distance
-        # # distance_reward = -normalized_distance
-        # distance_reward = -1 + (1 - normalized_distance) * 20
-        # # distance_reward = -int(distance_3d(self.robot_position,self.goal_position))
-        # # distance_reward = np.exp(distance_reward)
-        # self.reward = distance_reward
-        # print('[REWARD] Distance REward : ',self.reward)
-        
-        # # Reward for Exploring new areas and not get stuck 
         limited_robot_position = [
             int(pos) for pos in self.robot_position
         ]
         current_state = (limited_robot_position[0],limited_robot_position[1],limited_robot_position[2])
         if current_state not in self.visited_states:
-            print('[Reward] Visiting new state : ',current_state, self.reward)
-            self.reward += 3
             self.visited_states.add(current_state)
-        # else:
-        #     print('[INFO] Reward before penalty : ',self.reward)
-        #     self.reward /= 10
-        
+            
         collision_info = self.check_collision_with_walls()
         if collision_info['has_collided']:
             logging.info('[INFO] Has Colided With Wall ')
             collision_status = 1
-            self.reward -= 5
-            print('[Reward] Wall Penalty : ',self.reward)
             self.done = True  
             
         # Update the positions
@@ -830,7 +816,6 @@ class SearchAndRescueEnv(gym.Env):
         if collision_info['has_collided']:
             logging.info('[INFO] Has Colided With Rooms ')
             collision_status = 2
-            self.reward *= 100
             self.done = True 
 
         obj_collision_info = self.check_collision_with_movable_objects()
@@ -850,16 +835,13 @@ class SearchAndRescueEnv(gym.Env):
         goal_collision_info = self.check_collision_with_goal_and_update_state(self.robot_position)
         if goal_collision_info['reached_goal']:
             collision_status = 2 # Change to 5
-            self.reward += 10
             print('[Reward] Goal reward : ',self.reward)
             self.done = True
         
         # Check if Number of Steps Greater than Max Steps If So Set Episode to be Done - to Prevent the agent to Wander The environment indefinetly during learning
-        if self.current_step > self.max_steps:
+        if self.current_step > MAX_STEPS:
             logging.info('[INFO] Maximum Steps Reached .. Ending the episode ')
             self.done = True
-            if not goal_collision_info['reached_goal']:
-                self.reward -= 5
         
         # Calculate The Cummulative Reward
         self.cumulative_reward += self.reward
@@ -878,7 +860,7 @@ class SearchAndRescueEnv(gym.Env):
         self.update_uid_texture_class_and_movability(sensing_info)
         positional_data = self.prepare_positional_data_for_obs()
         objects_data = self.prepare_objects_data(collision_status)
-        wall_data = self.prepare_walls_data(collision_status)
+        wall_data,wall_positions = self.prepare_walls_data(collision_status)
         
         observation_space = {
             'positional_data': positional_data,
@@ -886,16 +868,12 @@ class SearchAndRescueEnv(gym.Env):
             'wall_data': wall_data, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
         }
         
+        self.reward = calculate_reward(self.robot_position,self.goal_position,wall_positions,self.visited_states,MAX_STEPS)
+        wandb.log({f'Step@Episode-{self.episode_count}': self.current_step,'Reward':self.reward})
         info = {}
         self.dump_digital_mind_to_json()
         print(f'[INFO] Reward In Episode - {self.episode_count} @ Step - {self.current_step} : ',self.reward)
         return observation_space,self.reward,self.done,info
-    
-    def discretize_position(self, position,cell_size=1):
-        # Convert a continuous position to a grid cell, assuming position is a tuple (x, y, z)
-        grid_x = int(position[0] // cell_size)
-        grid_y = int(position[1] // cell_size)
-        return grid_x, grid_y
     
     def dump_digital_mind_to_json(self):
         objects_data = {}
@@ -991,7 +969,6 @@ class SearchAndRescueEnv(gym.Env):
         self.current_step = 0
         self.cumulative_reward = 0
         self.goal_reached = False
-        self.max_steps = 250
         
         self.prev_actions = deque(maxlen=AGENT_ACTION_LEN)
         for i in range(AGENT_ACTION_LEN):
@@ -1018,7 +995,7 @@ class SearchAndRescueEnv(gym.Env):
         
         positional_data = self.prepare_positional_data_for_obs()
         objects_data = self.prepare_objects_data(2)
-        wall_data = self.prepare_walls_data(1)
+        wall_data,wall_positions = self.prepare_walls_data(1)
         
         observation_space = {
             'positional_data': positional_data,
@@ -1030,13 +1007,9 @@ class SearchAndRescueEnv(gym.Env):
     
     def render(self, mode='rgb_array'):
         if mode == 'rgb_array':
-            # Convert pybullet's camera output (height, width, 4) numpy array to Pillow Image
             img = Image.fromarray(self.rgbImg)
-            # Resize the image and remove alpha channel
             img = img.resize((self.rgbImgWidth, self.rgbImgHeight)).convert('RGB')
-            # Convert back to numpy array
             rgb_array = np.array(img)
-            # Append the processed frame for video generation
             self.frames.append(rgb_array)
             return rgb_array
     
@@ -1045,13 +1018,11 @@ class SearchAndRescueEnv(gym.Env):
             fourcc = cv2.VideoWriter_fourcc(*'MP4V')
             out = cv2.VideoWriter(video_path, fourcc, 20.0, (self.rgbImgWidth, self.rgbImgHeight))
 
-            # Write the frames to the video
             for frame in self.frames:
                 if frame is not None:
                     frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                     out.write(frame_bgr)
 
-            # Release the video writer and clear frames
             out.release()
             print(f"Video saved to {video_path}")
 
@@ -1061,7 +1032,6 @@ class SearchAndRescueEnv(gym.Env):
     def seed(self, seed=None):  
         pass # Not Needed
 
-TIMESTEPS = 10000
 run = wandb.init(project="[GDP] Search&Rescue-3D", entity="juliangeralddcruz", reinit=True)
 wandb.init(
         project="[GDP] Search&Rescue-3D",
