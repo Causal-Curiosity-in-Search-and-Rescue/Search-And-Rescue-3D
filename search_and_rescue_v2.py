@@ -272,6 +272,33 @@ class SearchAndRescueEnv(gym.Env):
             objectPositions = pos
         return objectPositions
     
+    def discrete_translated_action(self,action):
+        force_magnitude = 32
+        force_direction = [0,0,0]
+        min_x, max_x = -1, 1  # Adjusted to keep the robot within the inner squares
+        min_y, max_y = -1, 1  # Adjusted to keep the robot within the inner squares
+        if action == 0:  # Up
+            if self.robot_position[1] < max_y:
+                force_direction = [0, force_magnitude, 0]
+        elif action == 1:  # Down
+            if self.robot_position[1] > min_y:
+                force_direction = [0, -force_magnitude, 0]
+        elif action == 2:  # Left
+            if self.robot_position[0] > min_x:
+                force_direction = [-force_magnitude, 0, 0]
+        elif action == 3:  # Right
+            if self.robot_position[0] < max_x:
+                force_direction = [force_magnitude, 0, 0]
+
+        if action < 4:  # Apply force if action is not Noop and within boundaries
+            p.applyExternalForce(objectUniqueId=self.TURTLE,
+                                 linkIndex=-1,
+                                 forceObj=force_direction,
+                                 posObj=self.robot_position,
+                                 flags=p.WORLD_FRAME)
+            
+        p.stepSimulation()
+    
     def translate_action(self,action):
         move = 0
         turn = 0
@@ -796,7 +823,7 @@ class SearchAndRescueEnv(gym.Env):
        
         self.previous_position = self.robot_position
         
-        self.translate_action(action)
+        self.discrete_translated_action(action)
         # Update the positions
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         
