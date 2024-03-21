@@ -339,14 +339,16 @@ class SearchAndRescueEnv(gym.Env):
         p.setJointMotorControl2(self.TURTLE, 0, p.VELOCITY_CONTROL, targetVelocity=leftWheelVelocity, force=1000)
         p.setJointMotorControl2(self.TURTLE, 1, p.VELOCITY_CONTROL, targetVelocity=rightWheelVelocity, force=1000)
         p.stepSimulation()
-            
-    def setup_agent(self):
+    
+    def create_agent(self):
         robot_collision_shape_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=[0.1, 0.1, 0.1])
         robot_visual_shape_id = p.createVisualShape(p.GEOM_BOX, halfExtents=[0.1, 0.1, 0.1], rgbaColor=[1, 0, 0, 1])
         self.TURTLE = p.createMultiBody(baseMass=1,
                                         baseCollisionShapeIndex=robot_collision_shape_id,
                                         baseVisualShapeIndex=robot_visual_shape_id,
                                         basePosition=self.robotStartPos)
+            
+    def setup_agent(self):
         agent_pos, agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         yaw = p.getEulerFromQuaternion(agent_orn)[-1]
         xA, yA, zA = agent_pos
