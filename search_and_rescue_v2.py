@@ -868,7 +868,7 @@ class SearchAndRescueEnv(gym.Env):
             'wall_data': wall_data, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
         }
         
-        self.reward = calculate_reward(self.robot_position,self.goal_position,wall_positions,self.visited_states,MAX_STEPS)
+        self.reward = calculate_reward(self.robot_position,self.current_step,self.goal_position,wall_positions,self.visited_states,MAX_STEPS)
         wandb.log({f'Step@Episode-{self.episode_count}': self.current_step,'Reward':self.reward})
         info = {}
         self.dump_digital_mind_to_json()

@@ -1,6 +1,6 @@
 import numpy as np 
 
-def calculate_reward(current_position, goal_position, wall_positions, visited_states, max_steps,some_threshold=0.5):
+def calculate_reward(current_position, current_step, goal_position, wall_positions, visited_states, max_steps,some_threshold=0.5):
     reward = 0  # Reset reward for each calculation
 
     # Distance to goal reward
@@ -21,7 +21,7 @@ def calculate_reward(current_position, goal_position, wall_positions, visited_st
 
     # Step penalty and urgency as steps approach max_steps
     step_penalty = -0.1  # Small penalty for each step
-    steps_remaining = max_steps - self.current_step
+    steps_remaining = max_steps - current_step
     urgency_bonus = (1 - steps_remaining / max_steps) * 5  # Increase penalty as fewer steps remain
     reward += step_penalty - urgency_bonus
 
