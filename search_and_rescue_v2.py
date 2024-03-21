@@ -296,6 +296,7 @@ class SearchAndRescueEnv(gym.Env):
                                  forceObj=force_direction,
                                  posObj=self.robot_position,
                                  flags=p.WORLD_FRAME)
+            print('applied force direction : ',force_direction)
             
         p.stepSimulation()
     
@@ -339,14 +340,6 @@ class SearchAndRescueEnv(gym.Env):
         p.setJointMotorControl2(self.TURTLE, 0, p.VELOCITY_CONTROL, targetVelocity=leftWheelVelocity, force=1000)
         p.setJointMotorControl2(self.TURTLE, 1, p.VELOCITY_CONTROL, targetVelocity=rightWheelVelocity, force=1000)
         p.stepSimulation()
-    
-    def create_agent(self):
-        robot_collision_shape_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=[0.1, 0.1, 0.1])
-        robot_visual_shape_id = p.createVisualShape(p.GEOM_BOX, halfExtents=[0.1, 0.1, 0.1], rgbaColor=[1, 0, 0, 1])
-        self.TURTLE = p.createMultiBody(baseMass=1,
-                                        baseCollisionShapeIndex=robot_collision_shape_id,
-                                        baseVisualShapeIndex=robot_visual_shape_id,
-                                        basePosition=self.robotStartPos)
             
     def setup_agent(self):
         agent_pos, agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
@@ -958,9 +951,7 @@ class SearchAndRescueEnv(gym.Env):
                             startx=i
                             starty=j
         print(f"StartX:{startx}, StartY{starty}")
-        self.robotStartPos = [startx, starty, 0]
-        self.create_agent()
-        # self.TURTLE = p.loadURDF(f"{BASE_PATH}/urdf/most_simple_turtle.urdf", [startx, starty, 0])
+        self.TURTLE = p.loadURDF(f"{BASE_PATH}/urdf/most_simple_turtle.urdf", [startx, starty, 0])
         self.PLANE = p.loadURDF(f"{BASE_PATH}//urdf/plane_box.urdf")
         self.CRACKED_1 = p.loadTexture(f"{BASE_PATH}/textures/cracked_0052.png")
         self.MARBLED_1 = p.loadTexture(f"{BASE_PATH}/textures/grooved_0051.png")
