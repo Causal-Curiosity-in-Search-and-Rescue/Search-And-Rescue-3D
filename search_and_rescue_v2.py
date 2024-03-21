@@ -46,9 +46,9 @@ SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 # Initialize Digital MIND
 ENV_MANAGER = EnvironmentObjectsManager()
 
-AGENT_ACTION_LEN = 20
+AGENT_ACTION_LEN = 100
 TIMESTEPS = 10000
-MAX_STEPS = 150
+MAX_STEPS = 500
 p.connect(p.GUI)
 # p.connect(p.DIRECT)
 
@@ -811,7 +811,7 @@ class SearchAndRescueEnv(gym.Env):
         if collision_info['has_collided']:
             logging.info('[INFO] Has Colided With Wall ')
             collision_status = 1
-            self.done = True  
+            # self.done = True  
             
         # Update the positions
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
@@ -1045,7 +1045,7 @@ wandb.init(
 env = SearchAndRescueEnv()
 env.reset()
 
-model = PPO("MultiInputPolicy", env, verbose=1)
+model = PPO("MultiInputPolicy", env,ent_coef=0.01, verbose=1)
 logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
 
 mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=10)
