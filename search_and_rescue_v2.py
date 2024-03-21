@@ -80,7 +80,7 @@ class SearchAndRescueEnv(gym.Env):
   
     def __init__(self):
         super(SearchAndRescueEnv, self).__init__()
-        self.action_space = spaces.Discrete(3)  # Forward, Left, Right
+        self.action_space = spaces.Discrete(5)  # Forward, Left, Right
         
         self.observation_space = spaces.Dict({
             'positional_data': spaces.Box(low=np.array([0, 0, 0, 0, 0, 0] + [-1] * AGENT_ACTION_LEN), high=np.array([11, 11, 11, 11, 11, 11] + [2] * AGENT_ACTION_LEN), shape=(6+AGENT_ACTION_LEN,), dtype=np.float32),
@@ -340,7 +340,13 @@ class SearchAndRescueEnv(gym.Env):
         p.setJointMotorControl2(self.TURTLE, 1, p.VELOCITY_CONTROL, targetVelocity=rightWheelVelocity, force=1000)
         p.stepSimulation()
             
-    def setup_agent(self):
+    def setup_agent(self,robotStartPos):
+        robot_collision_shape_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=[0.1, 0.1, 0.1])
+        robot_visual_shape_id = p.createVisualShape(p.GEOM_BOX, halfExtents=[0.1, 0.1, 0.1], rgbaColor=[1, 0, 0, 1])
+        self.TURTLE = p.createMultiBody(baseMass=1,
+                                        baseCollisionShapeIndex=robot_collision_shape_id,
+                                        baseVisualShapeIndex=robot_visual_shape_id,
+                                        basePosition=robotStartPos)
         agent_pos, agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         yaw = p.getEulerFromQuaternion(agent_orn)[-1]
         xA, yA, zA = agent_pos
@@ -979,7 +985,7 @@ class SearchAndRescueEnv(gym.Env):
         # Set the Goal to be the position of the 3rd Movable Object for now 
         
         # Setup the Agent 
-        self.robot_position,self.camera_position,self.robot_orientation = self.setup_agent()
+        self.robot_position,self.camera_position,self.robot_orientation = self.setup_agent([startx, starty, 0])
         self.previous_position = self.robot_position
         self.visited_states = set()
         
