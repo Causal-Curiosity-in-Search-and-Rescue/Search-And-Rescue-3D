@@ -46,7 +46,7 @@ SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 # Initialize Digital MIND
 ENV_MANAGER = EnvironmentObjectsManager()
 
-AGENT_ACTION_LEN = 100
+AGENT_ACTION_LEN = 20
 TIMESTEPS = 10000
 MAX_STEPS = 150
 p.connect(p.GUI)
@@ -83,8 +83,8 @@ class SearchAndRescueEnv(gym.Env):
         self.action_space = spaces.Discrete(3)  # Forward, Left, Right
         
         self.observation_space = spaces.Dict({
-            # 'positional_data': spaces.Box(low=np.array([0, 0, 0, 0, 0, 0] + [-1] * AGENT_ACTION_LEN), high=np.array([11, 11, 11, 11, 11, 11] + [2] * AGENT_ACTION_LEN), shape=(6+AGENT_ACTION_LEN,), dtype=np.float32),
-            'positional_data': spaces.Box(low=np.array([0, 0, 0, 0, 0, 0] ), high=np.array([11, 11, 11, 11, 11, 11] ), shape=(6,), dtype=np.float32),
+            'positional_data': spaces.Box(low=np.array([0, 0, 0, 0, 0, 0] + [-1] * AGENT_ACTION_LEN), high=np.array([11, 11, 11, 11, 11, 11] + [2] * AGENT_ACTION_LEN), shape=(6+AGENT_ACTION_LEN,), dtype=np.float32),
+            # 'positional_data': spaces.Box(low=np.array([0, 0, 0, 0, 0, 0] ), high=np.array([11, 11, 11, 11, 11, 11] ), shape=(6,), dtype=np.float32),
             # 'object_data': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 5), dtype=np.float32),
             'wall_data': spaces.Box(low=np.zeros((44, 4)), high=np.array([11, 11, 11, 2]*44).reshape((44,4)), shape=(44, 4), dtype=np.float32)  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
         })
@@ -697,7 +697,7 @@ class SearchAndRescueEnv(gym.Env):
     def prepare_positional_data_for_obs(self):
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
         assert all(0 <= pos <= 11 for pos in self.robot_position), "Robot Position out of bounds"
-        position_data = list(self.robot_position) + list(self.goal_position) #+ list(self.prev_actions)
+        position_data = list(self.robot_position) + list(self.goal_position) + list(self.prev_actions)
         # print('[DEBUG] Positional Data : ',np.array(position_data).shape)
         return np.array(position_data,dtype=np.float32)
     
