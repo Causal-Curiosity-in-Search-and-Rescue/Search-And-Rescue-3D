@@ -27,9 +27,10 @@ import optuna
 from stable_baselines3.common.evaluation import evaluate_policy
 from gym.envs.registration import register
 import wandb
-import imageio
+# import imageio.v2 as imageio
 import pdb
-# import cv2
+import cv2
+from PIL import Image
 
 # LOAD THE URDF FILES AND TEXTURES
 BASE_PATH = os.path.join(os.getcwd(),"resources")
@@ -44,14 +45,14 @@ SCALER = load(f"{BASE_PATH}/models/scaler.joblib")
 # Initialize Digital MIND
 ENV_MANAGER = EnvironmentObjectsManager()
 
-AGENT_ACTION_LEN = 500
+AGENT_ACTION_LEN = 100
 p.connect(p.GUI)
 # p.connect(p.DIRECT)
 
-height = 20
-width = 20
-num_m = 3 # Movable
-num_i = 10 # Immovable
+height = 12
+width = 12
+num_m = 0 # Movable
+num_i = 0 # Immovable
 num_s = 1 # Start Positions
 n_texture_classes = 2
 n_objects = num_m + 4 + num_i
@@ -60,15 +61,7 @@ with open('maze_plan.pkl','wb') as file:
     pickle.dump(map_plan,file)
 visualisemaze(map_plan)
 
-# TRAINING the RL 
-models_dir = f"models/{int(time.time())}/"
-logdir = f"logs/{int(time.time())}/"
-
-if not os.path.exists(models_dir):
-    os.makedirs(models_dir)
-
-if not os.path.exists(logdir):
-    os.makedirs(logdir)
+video_path = f'{BASE_PATH}/episode_video.mp4'  # Assuming env.models_dir is where your videos are saved
 
 def create_or_update_object(detected_object_id,texture_class,detected_x,detected_y,detected_z,detected_texture):
     attributes = {
@@ -85,14 +78,18 @@ class SearchAndRescueEnv(gym.Env):
     def __init__(self):
         super(SearchAndRescueEnv, self).__init__()
         self.action_space = spaces.Discrete(3)  # Forward, Left, Right
+        
         self.observation_space = spaces.Dict({
-            'positional_data': spaces.Box(low=np.inf, high=np.inf, shape=(6+AGENT_ACTION_LEN,), dtype=np.float32),
-            'object_data': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 5), dtype=np.float32),
-            # 'wall_data': spaces.Box(low=-np.inf, high=np.inf, shape=(76, 4), dtype=np.float32)  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
+            # 'positional_data': spaces.Box(low=np.array([0, 0, 0, 0, 0, 0] + [-1] * AGENT_ACTION_LEN), high=np.array([11, 11, 11, 11, 11, 11] + [2] * AGENT_ACTION_LEN), shape=(6+AGENT_ACTION_LEN,), dtype=np.float32),
+            'positional_data': spaces.Box(low=np.array([0, 0, 0, 0, 0, 0] ), high=np.array([11, 11, 11, 11, 11, 11] ), shape=(6,), dtype=np.float32),
+            # 'object_data': spaces.Box(low=-np.inf, high=np.inf, shape=(n_objects, 5), dtype=np.float32),
+            'wall_data': spaces.Box(low=np.zeros((44, 4)), high=np.array([11, 11, 11, 2]*44).reshape((44,4)), shape=(44, 4), dtype=np.float32)  # 0: No collision, 1: Collided with wall, 2: Collided with room,,  3: Collided with immovable, 4: Collided with movable, 5: collision with goal
         })
+        self.frames=[]
 
         # Initial Params
         self.movability_dict = {0:None,1:None}
+        self.episode_count = 0
         self.movability_predictions = {}
         self.causal_interaction_count = 0
         self.causal_probablity_dict = {}
@@ -219,7 +216,7 @@ class SearchAndRescueEnv(gym.Env):
                                                       halfExtents=[0.5, 0.5, 0.5])
 
         goalIdVisual = p.createVisualShape(p.GEOM_BOX,
-                                          halfExtents=[0.5, 0.5, 3],
+                                          halfExtents=[0.5, 0.5, 0.5],
                                           rgbaColor=[0, 1, 0, 1])
         goalIDCollision = p.createCollisionShape(p.GEOM_BOX,
                                         halfExtents=[0.5, 0.5, 0.5])
@@ -251,10 +248,10 @@ class SearchAndRescueEnv(gym.Env):
 
                 if map_plan[i][j] == "o":
                     
-                    self.goal_id = p.createMultiBody(baseMass=0,
+                    self.goal_id = p.createMultiBody(baseMass=1,
                                       baseVisualShapeIndex=goalIdVisual,
                                       baseCollisionShapeIndex=goalIDCollision,
-                                      basePosition=[i, j, 3],
+                                      basePosition=[i, j, 0.5],
                                       )
 
         return object_ids # returns the unique id for each obstacle created
@@ -275,7 +272,7 @@ class SearchAndRescueEnv(gym.Env):
     def translate_action(self,action):
         move = 0
         turn = 0
-        speed = 7
+        speed = 2
         leftWheelVelocity = 0
         rightWheelVelocity = 0
         
@@ -285,8 +282,10 @@ class SearchAndRescueEnv(gym.Env):
         #     move = -1
         if action == 1: # turn right
             turn = -0.5
+            move = 1
         if action == 2: #turn left 
             turn = 0.5
+            move = 1
             
         rightWheelVelocity += (move + turn) * speed
         leftWheelVelocity += (move - turn) * speed
@@ -396,7 +395,7 @@ class SearchAndRescueEnv(gym.Env):
                 thresholded_prediction = self.apply_thresholding(sorted_obj_id,current_visual_prediction)
                 # thresholded_prediction = current_visual_prediction
                 classified_image = "Cracked" if (thresholded_prediction == 1) else "Grooved"
-                print(f'[INFO] Classified Texture Class : {classified_image} - UID : {uid} - Position : {pos} -  {thresholded_prediction} - {distance} - {cos_angle}')
+                # print(f'[INFO] Classified Texture Class : {classified_image} - UID : {uid} - Position : {pos} -  {thresholded_prediction} - {distance} - {cos_angle}')
                 
                 #On getting close to object for inspection, get the predicted class
                 if distance<=1.8 and cos_angle < -0.50: # Robot is facing the object 
@@ -688,13 +687,16 @@ class SearchAndRescueEnv(gym.Env):
         for contact in contact_points:
             if contact[2] in [self.goal_id]: 
                 collision_info['reached_goal']=True
+                break # no need to check further if collision is found
         
         return collision_info   
     
     def prepare_positional_data_for_obs(self):
-        position_data = list(self.robot_position) + list(self.goal_position) + list(self.prev_actions)
-        print('[DEBUG] Positional Data : ',np.array(position_data).shape)
-        return np.array(position_data)
+        self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
+        assert all(0 <= pos <= 11 for pos in self.robot_position), "Robot Position out of bounds"
+        position_data = list(self.robot_position) + list(self.goal_position) #+ list(self.prev_actions)
+        # print('[DEBUG] Positional Data : ',np.array(position_data).shape)
+        return np.array(position_data,dtype=np.float32)
     
     def prepare_objects_data(self,collision_status):
         # Create a sorted list of object IDs
@@ -706,7 +708,7 @@ class SearchAndRescueEnv(gym.Env):
             # delta = [(object_position[i] - self.robot_position[i])  for i in range(3)]
             object_data = list(object_position) + [self.uid_texture_class_pred[index]] + [self.uid_movable_class_pred[index]] #+ [collision_status]
             scaled_object_deltas.append(object_data)
-        print('[DEBUG] : Objets Data : ',np.array(scaled_object_deltas).shape)
+        # print('[DEBUG] : Objets Data : ',np.array(scaled_object_deltas).shape)
         return np.array(scaled_object_deltas)
             
     def update_uid_texture_class_and_movability(self,sensing_info):
@@ -721,12 +723,16 @@ class SearchAndRescueEnv(gym.Env):
                             self.uid_texture_class_pred[index]=obj.texture_class 
                             self.uid_movable_class_pred[index]=obj.casual_probability 
     
+    def limit_precision(self,value, decimals=3):
+        return round(value, decimals)
+    
     def prepare_walls_data(self,collision_status):
         # for wall_id, wall_midpoint in self.wall_midpoints.items():
         wall_data = []
         combined_wall_ids = self.wall_ids 
         for _wall_id  in combined_wall_ids:
             _wall_pos,_ = p.getBasePositionAndOrientation(_wall_id)
+            assert all(0 <= pos <= 11 for pos in _wall_pos), "Wall Position out of Bounds"
             _wall_data =  list(_wall_pos) + [collision_status]
             wall_data.append(_wall_data)
         print(f'[DEBUG] Wall Data : {np.array(wall_data).shape}')
@@ -783,14 +789,39 @@ class SearchAndRescueEnv(gym.Env):
         self.previous_position = self.robot_position
         
         self.translate_action(action)
-       
         # Update the positions
         self.robot_position,agent_orn = p.getBasePositionAndOrientation(self.TURTLE)
+        
+        # Reward based on distance between goal and agent 
+        # Calculate the normalized distance (assuming the maximum possible distance is the diagonal of your space, adjust accordingly)
+        # max_distance = np.sqrt(12**2 + 12**2 + 12**2)  # Assuming a 3D environment, replace with your actual max distance
+        # normalized_distance = distance_3d(self.robot_position, self.goal_position) / max_distance
+        # # distance_reward = -normalized_distance
+        # distance_reward = -1 + (1 - normalized_distance) * 20
+        # # distance_reward = -int(distance_3d(self.robot_position,self.goal_position))
+        # # distance_reward = np.exp(distance_reward)
+        # self.reward = distance_reward
+        # print('[REWARD] Distance REward : ',self.reward)
+        
+        # # Reward for Exploring new areas and not get stuck 
+        limited_robot_position = [
+            int(pos) for pos in self.robot_position
+        ]
+        current_state = (limited_robot_position[0],limited_robot_position[1],limited_robot_position[2])
+        if current_state not in self.visited_states:
+            print('[Reward] Visiting new state : ',current_state, self.reward)
+            self.reward += 3
+            self.visited_states.add(current_state)
+        # else:
+        #     print('[INFO] Reward before penalty : ',self.reward)
+        #     self.reward /= 10
+        
         collision_info = self.check_collision_with_walls()
         if collision_info['has_collided']:
             logging.info('[INFO] Has Colided With Wall ')
             collision_status = 1
-            self.reward = -1
+            self.reward -= 5
+            print('[Reward] Wall Penalty : ',self.reward)
             self.done = True  
             
         # Update the positions
@@ -799,7 +830,7 @@ class SearchAndRescueEnv(gym.Env):
         if collision_info['has_collided']:
             logging.info('[INFO] Has Colided With Rooms ')
             collision_status = 2
-            self.reward = 20
+            self.reward *= 100
             self.done = True 
 
         obj_collision_info = self.check_collision_with_movable_objects()
@@ -818,23 +849,28 @@ class SearchAndRescueEnv(gym.Env):
         # handle collision with goal - Set a high reward and set done to true
         goal_collision_info = self.check_collision_with_goal_and_update_state(self.robot_position)
         if goal_collision_info['reached_goal']:
-            logging.info('[GOAL] Has Reached Goal ')
-            logging.info(f'[GOAL] Number of Interactions with Movable Object : {self.cummulative_interactions_with_movable_objects}')
-            logging.info(f'[GOAL] Number of Interactions with Immovable Object : {self.cummulative_interactions_with_immovable_objects}')
-            logging.ingo(f'[GOAL] Number of Steps Taken to Reach Goal : {self.current_step}')
-            collision_status = 5
-            self.reward = 200
+            collision_status = 2 # Change to 5
+            self.reward += 10
+            print('[Reward] Goal reward : ',self.reward)
             self.done = True
         
         # Check if Number of Steps Greater than Max Steps If So Set Episode to be Done - to Prevent the agent to Wander The environment indefinetly during learning
         if self.current_step > self.max_steps:
             logging.info('[INFO] Maximum Steps Reached .. Ending the episode ')
             self.done = True
-            
+            if not goal_collision_info['reached_goal']:
+                self.reward -= 5
+        
         # Calculate The Cummulative Reward
-        self.cumulative_reward = self.reward
+        self.cumulative_reward += self.reward
         if self.done:
-            logging.info(f'[INFO] Episode Ending with Cumlative Reward : {self.cumulative_reward}') # This metric can be used to compare how well the agent performs with and without causal and digital mind
+            self.episode_count += 1
+            logging.info(f'[INFO] Episode - {self.episode_count} Ending with Cumlative Reward : {self.cumulative_reward}') # This metric can be used to compare how well the agent performs with and without causal and digital mind
+        
+        if goal_collision_info['reached_goal']:
+            logging.info(f'[GOAL] Has Reached Goal in Episode : {self.episode_count} @ Step : {self.current_step} with reward : {self.reward}')
+            # logging.info(f'[GOAL] Number of Interactions with Movable Object : {self.cummulative_interactions_with_movable_objects}')
+            # logging.info(f'[GOAL] Number of Interactions with Immovable Object : {self.cummulative_interactions_with_immovable_objects}')
         
         # Compute scaled deltas
         # goal_delta,objects_delta,walls_delta,rooms_delta = self.calculate_scaled_deltas(self.robot_position)
@@ -846,12 +882,13 @@ class SearchAndRescueEnv(gym.Env):
         
         observation_space = {
             'positional_data': positional_data,
-            'object_data': objects_data,
-            # 'wall_data': wall_data, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
+            # 'object_data': objects_data,
+            'wall_data': wall_data, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
         }
         
         info = {}
         self.dump_digital_mind_to_json()
+        print(f'[INFO] Reward In Episode - {self.episode_count} @ Step - {self.current_step} : ',self.reward)
         return observation_space,self.reward,self.done,info
     
     def discretize_position(self, position,cell_size=1):
@@ -936,6 +973,7 @@ class SearchAndRescueEnv(gym.Env):
         # Setup the Agent 
         self.robot_position,self.camera_position,self.robot_orientation = self.setup_agent()
         self.previous_position = self.robot_position
+        self.visited_states = set()
         
         # Reset RL Params
         self.done = False
@@ -946,7 +984,6 @@ class SearchAndRescueEnv(gym.Env):
         sorted_obj_ids = [0,1]
         for objectID in sorted_obj_ids:
             self.visual_predictions[objectID] = []
-        self.frames=[]
         self.cummulative_interactions_with_movable_objects = 0
         self.cummulative_interactions_with_immovable_objects = 0
         
@@ -954,11 +991,11 @@ class SearchAndRescueEnv(gym.Env):
         self.current_step = 0
         self.cumulative_reward = 0
         self.goal_reached = False
-        self.max_steps = 500
+        self.max_steps = 250
         
         self.prev_actions = deque(maxlen=AGENT_ACTION_LEN)
         for i in range(AGENT_ACTION_LEN):
-            self.prev_actions.append(100) # Creates the History 
+            self.prev_actions.append(-1) # Creates the History 
         
         # The initial Representation of the environment has to be created here 
         self.start_sensing_module_and_initializing_digital_mind()
@@ -985,37 +1022,46 @@ class SearchAndRescueEnv(gym.Env):
         
         observation_space = {
             'positional_data': positional_data,
-            'object_data': objects_data,
-            # 'wall_data': wall_data, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
+            # 'object_data': objects_data,
+            'wall_data': wall_data, # 0: No collision, 1: Collided with wall, 2: Collided with movable, 3: Collided with immovable, 4: collided with goal
         }
        
         return observation_space
-
+    
     def render(self, mode='rgb_array'):
         if mode == 'rgb_array':
-            rgb_array = np.array(self.rgbImg, dtype=np.uint8)
-            rgb_array = np.reshape(rgb_array, (self.rgbImgHeight, self.rgbImgWidth, 4)) # the last dimension contains RGBA values
-
-            # We will discard alpha channel if present
-            rgb_array = rgb_array[:, :, :3]
-
-            self.frames.append(rgb_array) # store frames to create video later
-
+            # Convert pybullet's camera output (height, width, 4) numpy array to Pillow Image
+            img = Image.fromarray(self.rgbImg)
+            # Resize the image and remove alpha channel
+            img = img.resize((self.rgbImgWidth, self.rgbImgHeight)).convert('RGB')
+            # Convert back to numpy array
+            rgb_array = np.array(img)
+            # Append the processed frame for video generation
+            self.frames.append(rgb_array)
             return rgb_array
     
     def close(self):
         if len(self.frames) > 0:
-            # Create a video from frames
-            with imageio.get_writer(f'{models_dir}episode_video.mp4', fps=20) as video:
-                for frame in self.frames:
-                    video.append_data(frame)
-            self.frames = []  # Reset the frame list for the next episode
-        p.disconnect()
+            fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+            out = cv2.VideoWriter(video_path, fourcc, 20.0, (self.rgbImgWidth, self.rgbImgHeight))
+
+            # Write the frames to the video
+            for frame in self.frames:
+                if frame is not None:
+                    frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                    out.write(frame_bgr)
+
+            # Release the video writer and clear frames
+            out.release()
+            print(f"Video saved to {video_path}")
+
+        self.frames = []  # Clear the frame buffer for the next episode
+        p.disconnect()  # Disconnect from the simulation, if applicable
     
     def seed(self, seed=None):  
         pass # Not Needed
 
-TIMESTEPS =10000
+TIMESTEPS = 10000
 run = wandb.init(project="[GDP] Search&Rescue-3D", entity="juliangeralddcruz", reinit=True)
 wandb.init(
         project="[GDP] Search&Rescue-3D",
@@ -1032,11 +1078,10 @@ logging.info('[INFO] Learning Started For RL with Causal and Digital Mind')
 mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=10)
 wandb.log({"mean_reward": mean_reward})
 model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"A2C")
-model.save(f"ppo_{mean_reward}")
+model.save(f"{BASE_PATH}/ppo_{mean_reward}")
 env.close()
 # Log the video to WandB
-video_path = f'{models_dir}episode_video.mp4'  # Assuming env.models_dir is where your videos are saved
-wandb.log({"episode_video": wandb.Video(video_path, fps=4, format="mp4")})
+wandb.log({"episode_video": wandb.Video(video_path, format="mp4")})
 run.finish()
 
 # UNIT-TEST
