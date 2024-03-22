@@ -275,8 +275,8 @@ class SearchAndRescueEnv(gym.Env):
     def discrete_translated_action(self,action):
         force_magnitude = 32
         force_direction = [0,0,0]
-        min_x, max_x = -1, 1  # Adjusted to keep the robot within the inner squares
-        min_y, max_y = -1, 1  # Adjusted to keep the robot within the inner squares
+        min_x, max_x = 0, 11  # Adjusted to keep the robot within the inner squares
+        min_y, max_y = 0, 11  # Adjusted to keep the robot within the inner squares
         if action == 0:  # Up
             if self.robot_position[1] < max_y:
                 force_direction = [0, force_magnitude, 0]
@@ -900,7 +900,7 @@ class SearchAndRescueEnv(gym.Env):
         }
         
         self.reward = calculate_reward(self.robot_position,self.current_step,self.goal_position,wall_positions,self.visited_states,MAX_STEPS)
-        wandb.log({f'Step@Episode-{self.episode_count}': self.current_step,'Reward':self.reward})
+        wandb.log({f'Episode-{self.episode_count}': self.current_step,'Reward':self.reward})
         info = {}
         self.dump_digital_mind_to_json()
         print(f'[INFO] Reward In Episode - {self.episode_count} @ Step - {self.current_step} : ',self.reward)
